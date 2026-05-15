@@ -1,0 +1,57 @@
+------------------------------------
+LANGUAGE TOGGLE REQUIREMENT
+------------------------------------
+
+Add a language switch button at the top of the app, clearly visible in the header.
+
+The button should allow the user to switch between:
+- العربية
+- English
+
+Behavior:
+- If the user selects العربية:
+  - The entire interface must become Arabic.
+  - Layout must be RTL.
+  - Navigation, buttons, cards, questions, assistant answers, room names, device names, bill text, battery text, and all messages must be Arabic.
+
+- If the user selects English:
+  - The entire interface must become English.
+  - Layout must be LTR.
+  - Navigation, buttons, cards, questions, assistant answers, room names, device names, bill text, battery text, and all messages must be English.
+
+The selected language must be saved in localStorage so when the user refreshes the page, the app remembers the selected language.
+
+The language switch should be beautiful and premium, not a basic dropdown.
+Design it like a modern pill toggle:
+[ العربية | English ]
+
+Place it in the top header beside the app name.
+
+Important:
+Do not mix Arabic and English in the same interface.
+When Arabic is selected, everything should be Arabic.
+When English is selected, everything should be English.
+
+------------------------------------
+EXTRA DESIGN QUALITY REQUIREMENT
+------------------------------------
+
+The visual design must be extremely impressive and presentation-ready.
+
+Make the app look premium, futuristic, and beautiful, like a high-end smart home product.
+The interface should create a strong “wow” effect for a graduation project presentation.
+
+Focus especially on:
+- The landing page
+- The house creation animation
+- The interactive digital home map
+- The glowing battery
+- The power outage simulation
+- The language switch button
+- Smooth animations and transitions
+
+Do not make the design simple, flat, or boring.
+The user experience should be simple, but the visual design must look advanced, elegant, and stunning.
+
+Make the digital house the center of attention.
+Use glowing energy lines, animated lights, soft shadows, glass cards, modern icons, and smooth motion effects.

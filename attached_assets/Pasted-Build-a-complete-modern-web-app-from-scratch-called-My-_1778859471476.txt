@@ -1,0 +1,634 @@
+Build a complete modern web app from scratch called:
+
+"My Home Twin | منزلي الرقمي"
+
+The project is a simple but visually impressive digital twin platform for citizens in Hebron. 
+The old idea of a complex city energy dashboard must be completely removed. 
+Do NOT build an industrial dashboard, network control system, MAS agents, smart grid map, WebSocket monitor, or complex energy operations panel.
+
+The goal:
+A normal citizen creates an account, answers a few simple questions about his home, and within less than one minute the app generates a beautiful digital twin of his house. 
+The user can control lights and devices directly from the drawn house map, view a simple estimated electricity bill, view battery storage information, and simulate a power outage.
+
+The app must be:
+- Very simple for the user.
+- Visually impressive and futuristic.
+- Arabic-first with RTL layout.
+- Easy to understand for a normal person who knows nothing about energy.
+- Suitable for a graduation project presentation.
+- Responsive for desktop and mobile.
+
+Use:
+- React
+- Tailwind CSS
+- Framer Motion for smooth animations
+- lucide-react icons
+- LocalStorage for saving demo users and home data
+- No real backend required
+- No real API required
+- No real authentication server required
+- No complex charts
+- No complex technical numbers
+
+Important design direction:
+The interface should look like an Apple/Tesla-style smart home app mixed with a futuristic digital twin system.
+Make it beautiful, premium, clean, and impressive.
+Use glassmorphism cards, soft shadows, glowing energy lines, smooth animations, and a beautiful 2D/2.5D house illustration.
+
+Color style:
+- Main background: very dark navy or soft futuristic gradient
+- Cards: glass effect with blur
+- Primary: cyan / electric blue
+- Energy: green
+- Warning: amber
+- Danger: soft red
+- Text: Arabic clear white and light gray
+- Do not make it look like the old dark complicated dashboard
+
+Main language:
+Arabic.
+Use simple Arabic words:
+- منزلي
+- غرفتي
+- بطاريتي
+- فاتورتي
+- وضع التوفير
+- وضع الانقطاع
+- نصيحة اليوم
+- تشغيل
+- إطفاء
+
+Avoid these words completely:
+- MAS
+- Agents
+- Grid Master
+- Load Balancing
+- WebSocket
+- Network import
+- كفاءة الشبكة
+- وكلاء الشبكة
+- توازن الأحمال
+- الشبكة الحية
+
+App structure:
+
+1. Landing Page
+2. Quick Register Page
+3. Home Setup Wizard
+4. My Digital Home Page
+5. Bill & Battery Page
+6. Simple Home Assistant Panel
+
+The flow must be very fast:
+The user should be able to register and create his digital home in less than one minute.
+
+------------------------------------
+PAGE 1: LANDING PAGE
+------------------------------------
+
+Create a beautiful landing page with a futuristic smart home visual.
+
+Arabic title:
+"ابنِ منزلك الرقمي خلال دقيقة"
+
+Subtitle:
+"منصة ذكية تساعدك على فهم فاتورتك، إدارة بطاريتك، والتحكم بأجهزة بيتك بطريقة بسيطة."
+
+Main button:
+"ابدأ الآن"
+
+Secondary small text:
+"تجربة مبسطة للمواطن داخل التوأم الرقمي لمدينة الخليل"
+
+Visual:
+Show a beautiful glowing smart house illustration or custom CSS/SVG house preview.
+Add animated energy lines around the house.
+Show small floating cards:
+- "فاتورة مبسطة"
+- "بطارية المنزل"
+- "تحكم من الخريطة"
+- "وضع الانقطاع"
+
+The page should feel premium and impressive.
+
+------------------------------------
+PAGE 2: QUICK REGISTER
+------------------------------------
+
+Keep registration very simple.
+
+Fields:
+1. الاسم
+2. المنطقة / الحي
+Options:
+- عين سارة
+- وسط البلد
+- الحرس
+- وادي التفاح
+- المنطقة الصناعية
+- أخرى
+
+3. كلمة المرور
+
+Button:
+"إنشاء حساب"
+
+Important:
+This is demo registration only.
+Store data in localStorage.
+After registration, go directly to Home Setup Wizard.
+
+Do not ask for:
+- email
+- phone number
+- ID number
+- exact address
+- electricity company account number
+
+------------------------------------
+PAGE 3: HOME SETUP WIZARD
+------------------------------------
+
+This page must be very fast, beautiful, and simple.
+Use step-by-step cards, not a long form.
+Each step should show large buttons/cards.
+
+Header:
+"خلينا نبني منزلك الرقمي"
+
+Progress:
+Show simple progress like:
+"الخطوة 1 من 6"
+
+Steps:
+
+Step 1:
+Question:
+"ما نوع منزلك؟"
+Options:
+- شقة
+- بيت مستقل
+- فيلا
+
+Step 2:
+Question:
+"كم عدد الغرف؟"
+Options:
+- 2
+- 3
+- 4
+- 5+
+
+Step 3:
+Question:
+"كم عدد أفراد العائلة؟"
+Options:
+- 1-2
+- 3-4
+- 5+
+
+Step 4:
+Question:
+"اختر الأجهزة الموجودة في بيتك"
+Options with icons:
+- سخان كهربائي
+- مكيف
+- ثلاجة
+- غسالة
+- تلفزيون
+- إنارة خارجية
+Allow multiple selection.
+
+Step 5:
+Question:
+"هل لديك بطارية تخزين؟"
+Options:
+- نعم
+- لا
+
+If yes, ask:
+"ما سعة البطارية؟"
+Options:
+- 2 kWh
+- 5 kWh
+- 10 kWh
+- إدخال يدوي
+
+If no, still show a virtual placeholder battery in the home page with text:
+"يمكنك إضافة بطارية لاحقاً"
+
+Step 6:
+Question:
+"كيف تصف فاتورتك الشهرية؟"
+Options:
+- منخفضة
+- متوسطة
+- مرتفعة
+
+Also optional quick amount cards:
+- 150 شيكل
+- 250 شيكل
+- 350 شيكل
+- أكثر
+
+Final button:
+"أنشئ منزلي الرقمي"
+
+After clicking:
+Show short animation:
+- "جاري بناء منزلك..."
+- "إضافة الغرف..."
+- "إضافة الأجهزة..."
+- "إضافة البطارية..."
+- "تم إنشاء منزلك الرقمي"
+
+Then navigate to My Digital Home.
+
+------------------------------------
+PAGE 4: MY DIGITAL HOME
+------------------------------------
+
+This is the most important page.
+
+Title:
+"منزلي الرقمي"
+
+Subtitle:
+"تحكم ببيتك من الخريطة مباشرة"
+
+Layout:
+Center: big interactive 2D/2.5D house map.
+Right side: home status, battery, bill summary.
+Left side: assistant panel with simple questions.
+Bottom: mode buttons.
+
+The house map:
+Create a beautiful custom CSS/SVG/isometric-like house.
+It should look futuristic and premium.
+It does not need to be real 3D.
+It should have:
+- Living room / الصالون
+- Kitchen / المطبخ
+- Bedroom / غرفة النوم
+- Bathroom / الحمام
+- Roof / السطح
+- Battery pod beside the house
+- Smart meter / العداد
+- Animated energy lines
+
+Rooms should depend on selected room count:
+If 2 rooms: show bedroom + living room + kitchen + bathroom.
+If 3 rooms: show two bedrooms + living room + kitchen + bathroom.
+If 4 rooms: show three bedrooms + living room + kitchen + bathroom.
+If 5+: show four bedrooms + living room + kitchen + bathroom.
+
+Each room must be clickable.
+When a room is clicked:
+Open a beautiful side/bottom detail panel with:
+- Room name
+- Devices in this room
+- Simple buttons to turn on/off each device
+- Simple advice
+
+Examples:
+
+Living room:
+- الإضاءة
+- التلفزيون
+- المكيف if selected
+
+Kitchen:
+- الإضاءة
+- الثلاجة
+- الغسالة if selected
+
+Bathroom:
+- الإضاءة
+- السخان if selected
+
+Bedroom:
+- الإضاءة
+- المكيف if selected
+
+Controls:
+The user controls devices ONLY by clicking on the house map and room panels.
+Do not let the assistant control devices.
+When a device is turned on/off, update the visual state:
+- Room becomes brighter when light is on
+- Room becomes dim when light is off
+- Device icon glows when on
+- Show toast notification:
+"تم تشغيل الإضاءة"
+"تم إطفاء السخان"
+
+Main mode buttons:
+1. الوضع العادي
+2. وضع التوفير
+3. وضع الليل
+4. محاكاة انقطاع الكهرباء
+
+Mode behavior:
+
+Normal mode:
+- House normal
+- Energy lines normal
+
+Saving mode:
+- Turn off heavy devices visually: heater and AC if selected
+- Show message:
+"تم تفعيل وضع التوفير، تم تقليل تشغيل الأجهزة العالية."
+- Highlight savings with green glow
+
+Night mode:
+- Darken background
+- Turn on essential lights
+- Show moon icon
+- Battery appears active if available
+
+Power outage simulation:
+This must be visually impressive.
+When user clicks "محاكاة انقطاع الكهرباء":
+- The house becomes darker
+- External grid line turns off
+- Battery pod glows strongly
+- Animated energy lines move from battery to essential rooms
+- Keep only essential devices:
+  - basic lights
+  - fridge
+  - Wi-Fi icon if you add one
+  - phone charging icon if you add one
+- Turn off heavy devices:
+  - heater
+  - AC
+  - washing machine
+- Show big message:
+"انقطاع كهرباء: البطارية تشغّل الأساسيات فقط"
+- Show what is powered:
+"الإضاءة الأساسية، الثلاجة، الواي فاي، شحن الهاتف"
+- Show what is not recommended:
+"السخان والمكيف غير مناسبين للبطارية"
+
+Battery visual:
+The battery must be a central beautiful element.
+Show it as a glowing vertical capsule or futuristic power pod beside the house.
+Display:
+- سعة البطارية: 5 kWh or selected capacity
+- الحالة: جاهزة
+- تكفي تقريباً: calculated simple hours
+- أفضل استخدام: وقت الانقطاع أو الليل
+
+Battery runtime simple calculation:
+Use very simple demo calculation:
+If battery capacity is:
+2 kWh => 2 hours for essentials
+5 kWh => 4 hours for essentials
+10 kWh => 8 hours for essentials
+Custom capacity => capacity * 0.8 hours rounded
+Do not show complicated formulas to the user.
+Show only:
+"تكفي تقريباً 4 ساعات للأشياء الأساسية"
+
+Bill card:
+Show:
+- الفاتورة المتوقعة
+- السبب الأبرز
+- نصيحة اليوم
+
+Simple bill estimate:
+Use these demo rules internally:
+- Base bill depending on user selected bill level:
+  منخفضة = 150 NIS
+  متوسطة = 250 NIS
+  مرتفعة = 350 NIS
+- If heater selected, add 30 NIS
+- If AC selected, add 45 NIS
+- If washing machine selected, add 20 NIS
+- If external lighting selected, add 15 NIS
+- If battery exists, subtract 20 NIS as expected saving
+Show final estimated bill in NIS.
+
+Do not overload user with numbers.
+Show:
+"فاتورتك المتوقعة: 285 شيكل"
+"أكثر شيء مؤثر: السخان والمكيف"
+"نصيحة اليوم: فعّل وضع التوفير مساءً"
+
+Add button:
+"عرض تفاصيل مبسطة"
+When clicked, show simple list:
+- السخان: قد يرفع الفاتورة
+- المكيف: استهلاك مرتفع
+- الغسالة: استهلاك متوسط
+- الإضاءة: استهلاك منخفض
+No complex kWh calculations.
+
+------------------------------------
+PAGE 5: BILL & BATTERY PAGE
+------------------------------------
+
+This can be accessible from the home page.
+
+Title:
+"الفاتورة والبطارية"
+
+Sections:
+
+A. Bill Summary:
+- فاتورتك المتوقعة هذا الشهر
+- حالة الفاتورة: منخفضة / متوسطة / مرتفعة
+- السبب الرئيسي
+- نصيحة توفير
+
+B. Simple appliance cost examples:
+Use simple human examples:
+- السخان: تقريباً 1 شيكل لكل ساعة
+- المكيف: تقريباً 1.5 شيكل لكل ساعة
+- الغسالة: تقريباً 2 شيكل لكل تشغيل
+- التلفزيون: تقريباً 0.25 شيكل لكل ساعة
+- الإضاءة: تكلفة قليلة حسب عدد الغرف
+
+Important:
+Make it clear that these are simplified demo estimates:
+"هذه أرقام توضيحية مبسطة وليست فاتورة حقيقية."
+
+C. Battery during outage:
+Show:
+- سعة البطارية
+- كم تقريباً تكفي
+- ماذا تشغل
+- ماذا لا يفضل تشغيله
+
+Powered by battery:
+- الإضاءة الأساسية
+- الثلاجة
+- الواي فاي
+- شحن الهاتف
+
+Not recommended:
+- السخان
+- المكيف
+- الغسالة
+
+Add a beautiful small outage simulation card.
+
+------------------------------------
+SIMPLE HOME ASSISTANT PANEL
+------------------------------------
+
+The assistant is only for questions and explanations.
+It must NOT control devices.
+The user controls devices only from the house map.
+
+Assistant name:
+"مساعد منزلك"
+
+Assistant intro:
+"اسألني عن الفاتورة، البطارية، أو كيف تتصرف وقت الانقطاع."
+
+Use predefined quick question buttons:
+1. "ليش فاتورتي عالية؟"
+2. "قديش بتقعد البطارية؟"
+3. "شو أشغل وقت الانقطاع؟"
+4. "كيف أوفر هذا الشهر؟"
+5. "هل السخان بصرف كثير؟"
+6. "هل المكيف مناسب للبطارية؟"
+
+When clicked, show friendly answer bubbles.
+
+Answers should be simple:
+
+For "ليش فاتورتي عالية؟":
+"غالباً السخان والمكيف هم أكثر الأجهزة التي ترفع الفاتورة. جرّب تفعيل وضع التوفير وتقليل تشغيل السخان عند عدم الحاجة."
+
+For "قديش بتقعد البطارية؟":
+"حسب سعة بطاريتك، يمكنها تشغيل الأشياء الأساسية مثل الإضاءة والثلاجة والواي فاي لعدة ساعات."
+
+For "شو أشغل وقت الانقطاع؟":
+"شغّل الأساسيات فقط: الإضاءة، الثلاجة، الواي فاي، وشحن الهاتف. لا يفضل تشغيل السخان أو المكيف."
+
+For "كيف أوفر هذا الشهر؟":
+"أطفئ الأجهزة غير الضرورية، قلل وقت تشغيل السخان، واستخدم وضع التوفير في المساء."
+
+For "هل السخان بصرف كثير؟":
+"نعم، السخان من أكثر الأجهزة تأثيراً على الفاتورة. تشغيله عند الحاجة فقط يساعد على التوفير."
+
+For "هل المكيف مناسب للبطارية؟":
+"لا يفضل تشغيل المكيف على البطارية لفترة طويلة لأنه يستهلك الطاقة بسرعة."
+
+Also allow a small input field where user can type.
+If typed message contains:
+- فاتورة => answer about bill
+- بطارية => answer about battery
+- انقطاع => answer about outage
+- سخان => answer about heater
+- مكيف => answer about AC
+- توفير => answer about saving
+Otherwise answer:
+"أستطيع مساعدتك في الفاتورة، البطارية، التوفير، أو الانقطاع."
+
+Again:
+The assistant must never control devices.
+
+------------------------------------
+NAVIGATION
+------------------------------------
+
+Keep navigation simple:
+- الرئيسية
+- منزلي
+- الفاتورة والبطارية
+- تسجيل خروج
+
+After user completes setup, default page should be My Digital Home.
+
+Use localStorage:
+- user profile
+- home setup data
+- device states
+- selected mode
+
+If user refreshes, app should remember his digital home.
+
+Add a reset/demo button somewhere small:
+"إعادة بناء المنزل"
+
+------------------------------------
+VISUAL DETAILS
+------------------------------------
+
+The design must be impressive.
+
+Use:
+- animated glowing energy lines
+- room hover effects
+- click animations
+- glass cards
+- soft neon borders
+- battery glow pulse
+- house build animation after setup
+- smooth page transitions
+- Arabic RTL layout
+- mobile responsive design
+
+The house should be the hero.
+Do not make the interface full of tables or charts.
+Do not make it look like a monitoring dashboard.
+It should look like a futuristic smart home control experience.
+
+On mobile:
+- House appears on top
+- Room cards below
+- Battery and bill cards below
+- Assistant collapsed or under the house
+
+------------------------------------
+DEMO DATA
+------------------------------------
+
+Use realistic simple demo text for Hebron citizens.
+Areas:
+- عين سارة
+- وسط البلد
+- الحرس
+- وادي التفاح
+- المنطقة الصناعية
+
+Device names:
+- إضاءة
+- سخان
+- مكيف
+- ثلاجة
+- غسالة
+- تلفزيون
+
+Simple status words:
+- يعمل
+- متوقف
+- جاهزة
+- تحتاج متابعة
+- جيد
+- مرتفع
+- متوسط
+- منخفض
+
+------------------------------------
+IMPORTANT FINAL REQUIREMENTS
+------------------------------------
+
+1. Build the full working app, not just mockups.
+2. All buttons must work.
+3. Registration must work using localStorage.
+4. Setup wizard must save answers.
+5. House must be generated based on room count and selected devices.
+6. Rooms must be clickable.
+7. Devices must be toggleable from the room panel.
+8. Battery runtime must be calculated simply based on selected capacity.
+9. Bill must be estimated using the simple demo rules.
+10. Power outage mode must visually change the house and battery.
+11. Assistant must answer questions only and not control devices.
+12. Arabic RTL must be correct.
+13. Make it visually stunning and presentation-ready.
+14. Remove any old energy grid, MAS, agent, or network dashboard concepts.
+15. Keep the user experience simple enough to complete in one minute.
+
+Start building now.

@@ -1,0 +1,580 @@
+Fix the current project by editing the existing code. Do NOT rebuild the app. Do NOT redesign everything. Fix the real logic bugs in the current files.
+
+I inspected the current files and these are the exact problems:
+
+1. Login works on the backend, but the frontend login flow is wrong.
+2. The house room count is fake because bedrooms overlap and the map uses a fixed layout.
+3. The setup still has Villa, but we only want Apartment or House.
+4. Setup values are saved as translated Arabic/English text instead of stable canonical values.
+5. Mode buttons need clear descriptions that explain exactly what each button does.
+
+Fix these issues carefully.
+
+==================================================
+CRITICAL FIX 1: LOGIN MUST LOAD THE USER HOME
+==================================================
+
+Current problem:
+In:
+artifacts/my-home-twin/src/pages/LoginPage.tsx
+
+After login, the code does:
+- api.login
+- login(token, user)
+- setLocation("/home")
+
+But HomeContext.login only saves token and user. It does NOT load setup, rooms, devices, mode, bill, battery, or logs.
+
+This causes routing problems because ProtectedRoute sees setup as null and redirects the user to setup, even if the user already built a home.
+
+Required fix:
+After successful login, load the current user home from /api/home before routing.
+
+Modify HomeContext and LoginPage.
+
+In:
+artifacts/my-home-twin/src/contexts/HomeContext.tsx
+
+Make refreshHome return the loaded HomeData, not void.
+
+Required behavior:
+refreshHome should:
+- call api.getHome()
+- set setup
+- set rooms
+- set devices
+- set mode
+- set bill
+- set battery
+- set activity logs
+- return the loaded data
+
+Example logic:
+async function refreshHome() {
+  const data = await api.getHome();
+  setSetup(data.setup);
+  setRooms(data.rooms);
+  setDevices(data.devices);
+  setModeState((data.mode?.active_mode || "normal") as HomeMode);
+  setBill(data.bill);
+  setBattery(data.battery);
+  setActivityLogs(data.activityLogs || []);
+  return data;
+}
+
+Update the TypeScript interface:
+refreshHome: () => Promise<HomeData | null>;
+
+Also add a helper function:
+loadHomeData(data: HomeData)
+or use refreshHome directly.
+
+In:
+artifacts/my-home-twin/src/pages/LoginPage.tsx
+
+After:
+const { token, user } = await api.login(...)
+
+Do:
+login(token, user)
+const homeData = await refreshHome()
+
+Then route:
+- if user.role === "admin" => /admin
+- else if homeData.setup exists => /home
+- else => /setup
+
+Do NOT route every citizen blindly to /home.
+
+Important:
+- Do not store password in localStorage.
+- Keep token only in localStorage.
+- Wrong password must still show error.
+- After logout and login again, the same saved home must appear.
+
+Also fix AdminLoginPage if needed:
+After admin login, admin can go to /admin.
+Admin does not need setup.
+
+==================================================
+CRITICAL FIX 2: REMOVE VILLA COMPLETELY
+==================================================
+
+In:
+artifacts/my-home-twin/src/pages/SetupPage.tsx
+
+Remove Villa from home type options.
+
+Only allow:
+Arabic:
+- شقة
+- دار
+
+English:
+- Apartment
+- House
+
+Use stable values, not translated labels.
+
+Home type options should be:
+[
+  { value: "apartment", ar: "شقة", en: "Apartment" },
+  { value: "house", ar: "دار", en: "House" }
+]
+
+When clicked:
+setHomeType(option.value)
+
+Never save:
+"شقة"
+"بيت مستقل"
+"فيلا"
+"Apartment"
+"House"
+
+Save only:
+"apartment"
+or
+"house"
+
+Update all display places to translate the value when showing it.
+
+==================================================
+CRITICAL FIX 3: ROOM COUNT MUST BE REAL
+==================================================
+
+Change the meaning of room_count.
+
+From now on:
+room_count means the number of bedrooms selected by the user.
+
+The setup question should say:
+
+Arabic:
+"كم غرفة نوم في بيتك؟"
+
+English:
+"How many bedrooms are in your home?"
+
+Options:
+- 1
+- 2
+- 3
+- 4
+- 5+
+
+If 5+ is selected, save 5.
+
+Remove the confusing old logic where 2 rooms means one bedroom.
+
+In SetupPage:
+Use stable room count values:
+1, 2, 3, 4, 5
+
+Send:
+roomCount: Number(rooms)
+
+Do NOT use translated strings.
+
+==================================================
+CRITICAL FIX 4: BACKEND ROOM GENERATION
+==================================================
+
+In:
+artifacts/api-server/src/routes/home.ts
+
+Current bad code:
+const numBedrooms = Math.max(1, (roomCount || 3) - 1);
+
+This is wrong.
+
+Replace it with:
+const requestedBedrooms = Number(roomCount);
+const numBedrooms = Math.min(5, Math.max(1, Number.isFinite(requestedBedrooms) ? requestedBedrooms : 2));
+
+Generate rooms like this:
+
+Always create:
+1. Living room
+2. Kitchen
+3. Bathroom
+
+Then create exactly numBedrooms bedrooms:
+- Bedroom 1
+- Bedroom 2
+- Bedroom 3
+- Bedroom 4
+- Bedroom 5
+
+Arabic:
+- غرفة النوم 1
+- غرفة النوم 2
+- غرفة النوم 3
+- غرفة النوم 4
+- غرفة النوم 5
+
+English:
+- Bedroom 1
+- Bedroom 2
+- Bedroom 3
+- Bedroom 4
+- Bedroom 5
+
+Do not create one generic bedroom only.
+Do not subtract 1 from roomCount.
+
+If the user selected 2 bedrooms, database must contain:
+- الصالون
+- المطبخ
+- الحمام
+- غرفة النوم 1
+- غرفة النوم 2
+
+If user selected 5+, database must contain:
+- الصالون
+- المطبخ
+- الحمام
+- غرفة النوم 1
+- غرفة النوم 2
+- غرفة النوم 3
+- غرفة النوم 4
+- غرفة النوم 5
+
+Also when rebuilding setup:
+- delete old devices
+- delete old rooms
+- delete old setup
+- insert new setup
+- generate new rooms based on the new room_count
+
+==================================================
+CRITICAL FIX 5: HOUSE MAP MUST NOT USE FIXED BEDROOM LAYOUT
+==================================================
+
+In:
+artifacts/my-home-twin/src/components/HouseMap.tsx
+
+Current problem:
+ROOM_LAYOUTS has only one layout for bedroom:
+{ type: "bedroom", x: 220, y: 280, w: 290, h: 110 }
+
+And getLayoutForRoom finds by type:
+ROOM_LAYOUTS.find(l => l.type === roomType)
+
+This means every bedroom gets the same exact rectangle and they overlap.
+
+Fix this completely.
+
+Do NOT use one fixed bedroom layout.
+
+Create a function that generates layout by room id and room index.
+
+Required logic:
+- Separate rooms by type:
+  livingRoom
+  kitchen
+  bathroom
+  bedrooms
+
+- Give living room, kitchen, and bathroom fixed clear positions.
+- Give each bedroom a unique position based on its bedroom index.
+- The layout must support 1 to 5 bedrooms.
+
+Example layout inside SVG viewBox 0 0 640 520:
+
+livingRoom:
+x 40, y 120, w 250, h 150
+
+kitchen:
+x 310, y 120, w 250, h 150
+
+bathroom:
+x 40, y 290, w 160, h 110
+
+bedrooms:
+Arrange bedrooms in a grid:
+Bedroom 1: x 220, y 290, w 160, h 110
+Bedroom 2: x 400, y 290, w 160, h 110
+Bedroom 3: x 40, y 420, w 160, h 90
+Bedroom 4: x 220, y 420, w 160, h 90
+Bedroom 5: x 400, y 420, w 160, h 90
+
+The function must return layout by room.id, not only by room.type.
+
+Example:
+function buildRoomLayouts(rooms) {
+  const layoutMap = new Map();
+
+  const living = rooms.find(r => r.type === "livingRoom");
+  const kitchen = rooms.find(r => r.type === "kitchen");
+  const bathroom = rooms.find(r => r.type === "bathroom");
+  const bedrooms = rooms.filter(r => r.type === "bedroom");
+
+  if (living) layoutMap.set(living.id, { x: 40, y: 120, w: 250, h: 150 });
+  if (kitchen) layoutMap.set(kitchen.id, { x: 310, y: 120, w: 250, h: 150 });
+  if (bathroom) layoutMap.set(bathroom.id, { x: 40, y: 290, w: 160, h: 110 });
+
+  const bedroomSlots = [
+    { x: 220, y: 290, w: 160, h: 110 },
+    { x: 400, y: 290, w: 160, h: 110 },
+    { x: 40, y: 420, w: 160, h: 90 },
+    { x: 220, y: 420, w: 160, h: 90 },
+    { x: 400, y: 420, w: 160, h: 90 },
+  ];
+
+  bedrooms.forEach((room, index) => {
+    layoutMap.set(room.id, bedroomSlots[index] || bedroomSlots[bedroomSlots.length - 1]);
+  });
+
+  return layoutMap;
+}
+
+Then in rooms.map:
+const layout = layoutMap.get(room.id);
+
+Do not calculate bedroom layout by type.
+
+Also:
+- Increase SVG viewBox to 640 540 or similar.
+- Make the map card height bigger if needed.
+- Do not let text overlap.
+- Do not draw energy lines through labels.
+- Room labels must be centered and clear.
+- Each room must be clickable.
+
+==================================================
+CRITICAL FIX 6: SETUP VALUES MUST BE CANONICAL
+==================================================
+
+In:
+SetupPage.tsx
+
+Do not save translated strings.
+
+Fix these:
+
+homeType:
+save only:
+apartment | house
+
+familySize:
+save only:
+small | medium | large
+
+billLevel:
+save only:
+low | medium | high
+
+roomCount:
+save number:
+1 | 2 | 3 | 4 | 5
+
+hasBattery:
+boolean
+
+batteryCapacity:
+number or null
+
+selectedDevices:
+stable English ids:
+heater
+ac
+fridge
+washingMachine
+tv
+outdoorLight
+
+Display Arabic/English using labels only.
+
+Do not do:
+setHomeType(t(...))
+setBillLevel(t(...))
+
+This is wrong because it changes saved data based on selected language.
+
+==================================================
+CRITICAL FIX 7: BATTERY STEP VALIDATION
+==================================================
+
+If user selects:
+hasBattery = true
+
+Then he must select battery capacity or enter custom capacity.
+
+canGoNext for step 5 should be:
+- if hasBattery === false => true
+- if hasBattery === true => batteryCapacity is number OR customCapacity has valid positive number
+
+Do not allow user to continue with battery yes and no capacity.
+
+==================================================
+CRITICAL FIX 8: MODE BUTTONS MUST EXPLAIN WHAT THEY DO
+==================================================
+
+In:
+artifacts/my-home-twin/src/components/ModeButtons.tsx
+
+Each mode button should show a short description under the title.
+
+Arabic descriptions:
+Normal:
+"يرجع البيت للوضع الطبيعي"
+
+Saving:
+"يطفي المكيف والسخان والغسالة"
+
+Night:
+"يشغل إضاءة أساسية ويطفي غير الضروري"
+
+Outage:
+"يشغل الأساسيات على البطارية فقط"
+
+English:
+Normal:
+"Restores normal home mode"
+
+Saving:
+"Turns off AC, heater, and washer"
+
+Night:
+"Turns on basic lights and turns off unnecessary devices"
+
+Outage:
+"Runs essentials on battery only"
+
+Make buttons slightly bigger cards, not tiny pills.
+Each button must be clear before clicking.
+
+After clicking a mode:
+- Call backend /api/mode
+- Update device states
+- Refresh home data from backend
+- Show toast with exactly what happened
+- Activity log must update
+
+Important:
+If saving mode is clicked, then when opening rooms, AC/heater/washer must truly be off.
+
+==================================================
+CRITICAL FIX 9: NORMAL MODE RESTORE
+==================================================
+
+Currently normal mode does not really restore previous states.
+
+Implement simple safe behavior:
+
+Before applying saving/night/outage mode:
+Save a snapshot of current device states in memory or database.
+
+Simpler accepted solution:
+Add table device_state_snapshots or add JSON column if easier.
+
+But if that is too much:
+When clicking normal mode:
+- Only set active_mode to normal
+- Do not claim it restored devices unless it actually restores them
+- Message should say:
+Arabic:
+"تم الرجوع للوضع العادي. يمكنك تشغيل الأجهزة من الغرف."
+English:
+"Normal mode is active. You can control devices from the rooms."
+
+Do NOT write fake message:
+"استعادة حالة الأجهزة السابقة"
+unless it truly restores them.
+
+==================================================
+CRITICAL FIX 10: LOGIN TESTS
+==================================================
+
+After fixing, test this exact flow manually or with simple scripts:
+
+Test A:
+1. Create account:
+name: test1
+password: 123456
+2. Select:
+home type = apartment
+bedrooms = 2
+family = medium
+devices = heater, ac, fridge
+battery = yes, 5 kWh
+bill = medium
+3. Build home
+4. Confirm database rooms include exactly:
+livingRoom, kitchen, bathroom, bedroom 1, bedroom 2
+5. Logout
+6. Login again with test1 / 123456
+7. App must go directly to /home
+8. Same rooms/devices must appear
+
+Test B:
+1. Create account test2
+2. Select bedrooms = 5+
+3. Build home
+4. Confirm 5 bedrooms are visible separately on the map
+5. No overlapping bedroom rectangles
+
+Test C:
+1. Login with wrong password
+2. Show clear error
+3. Do not enter the app
+
+Test D:
+1. Activate saving mode
+2. Open room panel
+3. AC/heater/washer must be OFF
+
+==================================================
+DO NOT DO THESE
+==================================================
+
+Do not rebuild the app.
+Do not create a new design.
+Do not remove existing pages.
+Do not switch back to localStorage auth.
+Do not store passwords in localStorage.
+Do not hardcode 4 rooms.
+Do not keep Villa.
+Do not store translated labels as database values.
+Do not make fake mode buttons.
+
+==================================================
+FILES TO EDIT
+==================================================
+
+You will most likely need to edit:
+
+Frontend:
+- artifacts/my-home-twin/src/contexts/HomeContext.tsx
+- artifacts/my-home-twin/src/pages/LoginPage.tsx
+- artifacts/my-home-twin/src/pages/SetupPage.tsx
+- artifacts/my-home-twin/src/components/HouseMap.tsx
+- artifacts/my-home-twin/src/components/ModeButtons.tsx
+- artifacts/my-home-twin/src/components/RoomPanel.tsx if needed
+
+Backend:
+- artifacts/api-server/src/routes/home.ts
+- artifacts/api-server/src/routes/mode.ts if needed
+- artifacts/api-server/src/db/database.ts only if schema migration is needed
+
+==================================================
+FINAL ACCEPTANCE
+==================================================
+
+The fix is accepted only if:
+
+1. Login with an existing user works.
+2. After login, the existing user's home loads.
+3. The app does not send a user with setup back to setup.
+4. Villa is removed.
+5. Home type saves only apartment or house.
+6. Bill level saves only low, medium, high.
+7. Room count saves a number only.
+8. The house map shows exactly the selected number of bedrooms.
+9. Bedrooms do not overlap.
+10. Saving/night/outage buttons clearly show what they do.
+11. Saving/outage mode actually changes device states.
+12. Everything still works in Arabic and English.
+
+Implement these fixes now.

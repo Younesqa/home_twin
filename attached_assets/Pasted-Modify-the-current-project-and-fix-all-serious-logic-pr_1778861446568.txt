@@ -1,0 +1,804 @@
+Modify the current project and fix all serious logic problems.
+
+Do NOT rebuild the whole app from scratch.
+Keep the citizen smart home digital twin idea, but make the app actually useful and working.
+
+Main project identity:
+Arabic:
+"منصة الخليل للمواطنين"
+"منزلي الرقمي"
+"الطاقة والبنية التحتية"
+
+English:
+"Hebron Citizen Platform"
+"My Digital Home"
+"Energy & Infrastructure"
+
+This is a citizen-facing smart home digital twin app.
+It is NOT a city dashboard.
+It is NOT an energy company control room.
+It is NOT a technical grid dashboard.
+
+==================================================
+CRITICAL PROBLEM: AUTHENTICATION AND DATABASE
+==================================================
+
+The current app does not have proper login/register logic.
+It looks like it does not store passwords or users correctly.
+Fix this completely.
+
+I need real demo authentication with a database, not fake login.
+
+Use a backend with:
+- Node.js
+- Express
+- SQLite database
+- bcryptjs for password hashing
+- JSON Web Token or secure session for login
+- React frontend connected to backend API
+
+Do NOT store user passwords in localStorage.
+Do NOT store plain text passwords.
+Do NOT make fake login.
+
+Use SQLite file:
+database.sqlite
+
+Install needed packages if missing:
+- express
+- cors
+- bcryptjs
+- jsonwebtoken
+- better-sqlite3 or sqlite3
+- concurrently if needed
+
+The app must run normally in Replit.
+
+==================================================
+DATABASE SCHEMA
+==================================================
+
+Create SQLite tables:
+
+1. users
+
+Fields:
+- id INTEGER PRIMARY KEY AUTOINCREMENT
+- name TEXT NOT NULL
+- area TEXT NOT NULL
+- password_hash TEXT NOT NULL
+- role TEXT DEFAULT 'citizen'
+- created_at TEXT NOT NULL
+
+Roles:
+- citizen
+- admin
+
+2. home_setups
+
+Fields:
+- id INTEGER PRIMARY KEY AUTOINCREMENT
+- user_id INTEGER NOT NULL
+- home_type TEXT
+- room_count INTEGER
+- family_size TEXT
+- bill_level TEXT
+- has_battery INTEGER
+- battery_capacity REAL
+- created_at TEXT
+- updated_at TEXT
+- FOREIGN KEY(user_id) REFERENCES users(id)
+
+3. rooms
+
+Fields:
+- id INTEGER PRIMARY KEY AUTOINCREMENT
+- user_id INTEGER NOT NULL
+- name_ar TEXT NOT NULL
+- name_en TEXT NOT NULL
+- type TEXT NOT NULL
+- sort_order INTEGER
+- FOREIGN KEY(user_id) REFERENCES users(id)
+
+Room types:
+- livingRoom
+- kitchen
+- bathroom
+- bedroom
+- roof
+- battery
+- meter
+
+4. devices
+
+Fields:
+- id INTEGER PRIMARY KEY AUTOINCREMENT
+- user_id INTEGER NOT NULL
+- room_id INTEGER NOT NULL
+- name_ar TEXT NOT NULL
+- name_en TEXT NOT NULL
+- type TEXT NOT NULL
+- is_on INTEGER DEFAULT 0
+- is_essential INTEGER DEFAULT 0
+- is_heavy INTEGER DEFAULT 0
+- created_at TEXT
+- updated_at TEXT
+- FOREIGN KEY(user_id) REFERENCES users(id)
+- FOREIGN KEY(room_id) REFERENCES rooms(id)
+
+Device types:
+- light
+- ac
+- heater
+- fridge
+- washingMachine
+- tv
+- wifi
+- phone
+- outdoorLight
+- other
+
+5. activity_logs
+
+Fields:
+- id INTEGER PRIMARY KEY AUTOINCREMENT
+- user_id INTEGER NOT NULL
+- message_ar TEXT NOT NULL
+- message_en TEXT NOT NULL
+- created_at TEXT NOT NULL
+- FOREIGN KEY(user_id) REFERENCES users(id)
+
+6. modes
+
+Fields:
+- id INTEGER PRIMARY KEY AUTOINCREMENT
+- user_id INTEGER NOT NULL
+- active_mode TEXT DEFAULT 'normal'
+- battery_active INTEGER DEFAULT 0
+- updated_at TEXT
+- FOREIGN KEY(user_id) REFERENCES users(id)
+
+==================================================
+ADMIN ACCOUNT
+==================================================
+
+Seed a default admin account automatically if it does not exist:
+
+username/name:
+admin
+
+password:
+admin123
+
+role:
+admin
+
+Important:
+Hash admin password with bcrypt.
+Do not store it as plain text.
+
+Admin login must work from:
+- Landing page button:
+Arabic: "دخول المشرف"
+English: "Admin Login"
+
+or route:
+/admin-login
+
+Admin page:
+Arabic title:
+"لوحة مشرف منصة الخليل"
+
+English:
+"Hebron Platform Admin"
+
+Admin can view:
+- Total citizens
+- Citizens grouped by area
+- All registered users
+- Each user's home setup
+- Each user's rooms
+- Each user's devices
+- Battery info
+- Estimated bill
+- Current mode
+- Recent activity logs
+
+Admin must NOT control user devices.
+Admin can only view.
+
+==================================================
+AUTH API REQUIREMENTS
+==================================================
+
+Create backend API routes:
+
+POST /api/auth/register
+Body:
+{
+  name,
+  area,
+  password
+}
+
+Logic:
+- Validate fields
+- If name already exists, return clear error
+- Hash password using bcrypt
+- Insert user as role citizen
+- Return token and user object without password_hash
+
+POST /api/auth/login
+Body:
+{
+  name,
+  password
+}
+
+Logic:
+- Find user by name
+- Compare password with bcrypt
+- If valid, return token and user object
+- If invalid, return clear error
+
+GET /api/auth/me
+Headers:
+Authorization: Bearer token
+
+Return current logged-in user.
+
+POST /api/auth/logout
+Frontend can clear token.
+
+Important:
+Frontend should store only:
+- auth token
+- selected language
+
+Do not store password in frontend.
+
+==================================================
+HOME SETUP API REQUIREMENTS
+==================================================
+
+POST /api/home/setup
+Protected route.
+
+Body:
+{
+  homeType,
+  roomCount,
+  familySize,
+  billLevel,
+  hasBattery,
+  batteryCapacity,
+  selectedDevices
+}
+
+Logic:
+- Save setup in home_setups
+- Generate default rooms based on roomCount
+- Generate default devices based on selectedDevices
+- Save devices in database
+- Save activity log:
+Arabic: "تم إنشاء المنزل الرقمي"
+English: "Digital home created"
+
+GET /api/home
+Protected route.
+
+Return:
+{
+  user,
+  setup,
+  rooms,
+  devices,
+  mode,
+  bill,
+  battery,
+  activityLogs
+}
+
+PUT /api/home/setup
+Protected route.
+
+Allows updating home setup later.
+
+==================================================
+ROOM AND DEVICE API REQUIREMENTS
+==================================================
+
+GET /api/rooms
+Protected.
+Return current user's rooms.
+
+POST /api/devices
+Protected.
+Add device to a room.
+
+Body:
+{
+  roomId,
+  nameAr,
+  nameEn,
+  type
+}
+
+When adding device:
+Automatically set:
+isEssential and isHeavy based on type.
+
+Rules:
+- light: essential true, heavy false
+- fridge: essential true, heavy false
+- wifi: essential true, heavy false
+- phone: essential true, heavy false
+- ac: essential false, heavy true
+- heater: essential false, heavy true
+- washingMachine: essential false, heavy true
+- tv: essential false, heavy false
+- outdoorLight: essential false, heavy false
+- other: essential false, heavy false
+
+Add activity log:
+Arabic: "تم إضافة جهاز جديد"
+English: "New device added"
+
+PATCH /api/devices/:id/toggle
+Protected.
+Toggle device on/off.
+
+Body:
+{
+  isOn: true/false
+}
+
+Update database.
+Add activity log:
+Arabic example:
+"تم تشغيل الإضاءة"
+"تم إطفاء السخان"
+
+English:
+"Light turned on"
+"Heater turned off"
+
+DELETE /api/devices/:id
+Protected.
+Delete device from database.
+Add activity log.
+
+Important:
+User must be able to add and delete devices from each room.
+Do not force fixed devices only.
+
+==================================================
+MODE API REQUIREMENTS
+==================================================
+
+POST /api/mode
+Protected.
+
+Body:
+{
+  mode: "normal" | "saving" | "night" | "outage"
+}
+
+This must update real device states in database.
+No fake buttons.
+
+Mode logic:
+
+1. normal
+- Set active mode to normal
+- Do not force all devices on
+- If previous states were stored, restore them
+- Log:
+Arabic: "تم الرجوع للوضع العادي"
+English: "Normal mode restored"
+
+2. saving
+- Save current device states as previous snapshot if needed
+- Turn off all heavy devices:
+  ac, heater, washingMachine
+- Turn off outdoorLight
+- Keep essential devices on:
+  fridge, wifi, light if already on
+- Update devices in database
+- Log:
+Arabic: "تم تفعيل وضع التوفير: تم إطفاء الأجهزة الثقيلة"
+English: "Saving mode activated: heavy devices were turned off"
+
+3. night
+- Turn on essential lights:
+  living room light
+  bedroom 1 light
+- Keep fridge on
+- Turn off washingMachine
+- Turn off outdoorLight
+- Do not turn on heater or AC
+- Update devices in database
+- Log:
+Arabic: "تم تفعيل وضع الليل: تم تشغيل الإضاءة الأساسية"
+English: "Night mode activated: essential lights are on"
+
+4. outage
+If user has battery:
+- Set battery_active = true
+- Turn off heavy devices:
+  ac, heater, washingMachine
+- Turn off TV
+- Turn off outdoorLight
+- Keep essentials on:
+  lights, fridge, wifi, phone charger
+- Update devices in database
+- Log:
+Arabic: "انقطاع كهرباء: البطارية تشغّل الأساسيات فقط"
+English: "Power outage: battery is powering essentials only"
+
+If no battery:
+- Turn off heavy devices
+- Turn off non-essential devices
+- Keep minimal light if exists
+- Log:
+Arabic: "لا توجد بطارية: تم إطفاء الأجهزة غير الأساسية"
+English: "No battery: non-essential devices were turned off"
+
+GET /api/mode
+Return active mode.
+
+Important:
+After clicking a mode button, when user opens any room, device states must actually reflect the mode changes.
+Example:
+If Saving Mode is clicked, AC and heater must truly be OFF in the room panel and database.
+
+==================================================
+BILL AND BATTERY LOGIC
+==================================================
+
+Bill must use actual devices from database, not only setup answers.
+
+Bill calculation:
+Base:
+low = 150
+medium = 250
+high = 350
+
+Additions based on existing devices:
+- If user has heater device: +30
+- If user has AC device: +45
+- If user has washingMachine device: +20
+- If user has outdoorLight device: +15
+- If familySize = large: +25
+- If familySize = small: -10
+- If hasBattery = true: -20
+
+Final bill minimum:
+80
+
+Return:
+{
+  estimatedBill,
+  mainReasonAr,
+  mainReasonEn,
+  tipAr,
+  tipEn,
+  noteAr,
+  noteEn
+}
+
+Main reason logic:
+- heater and ac => السخان والمكيف / Heater and AC
+- heater only => السخان / Heater
+- ac only => المكيف / AC
+- washingMachine => الغسالة / Washing machine
+- otherwise => الاستخدام اليومي / Daily usage
+
+Battery runtime:
+If no battery:
+0
+
+If batteryCapacity = 2:
+2 hours
+
+If batteryCapacity = 5:
+4 hours
+
+If batteryCapacity = 10:
+8 hours
+
+Custom:
+Math.round(capacity * 0.8)
+
+Minimum custom runtime:
+1 hour
+
+==================================================
+FRONTEND AUTH FIXES
+==================================================
+
+Update frontend to use real backend auth.
+
+Registration page:
+- name
+- area
+- password
+- call POST /api/auth/register
+- save token in localStorage key:
+homeTwinToken
+- do NOT save password
+- redirect to builder
+
+Login page:
+Add proper login page:
+Arabic:
+"تسجيل الدخول"
+Fields:
+- الاسم
+- كلمة المرور
+Button:
+"دخول"
+
+English:
+"Login"
+Fields:
+- Name
+- Password
+Button:
+"Login"
+
+Call POST /api/auth/login.
+If success:
+save token and redirect to user home or builder.
+
+Landing page must show:
+- "إنشاء حساب"
+- "تسجيل الدخول"
+- "دخول المشرف"
+
+If a user already has account, he must be able to log in again after closing browser or logout.
+
+Logout:
+Clear token only.
+Redirect to landing/login.
+
+On app start:
+- Check homeTwinToken
+- Call /api/auth/me
+- If valid, load /api/home
+- If invalid, clear token
+
+==================================================
+FIX DEVICE MANAGEMENT IN UI
+==================================================
+
+When user clicks any room:
+Open room panel.
+
+Room panel must show:
+- Current devices
+- On/off button for each device
+- Delete button for each device
+- Add device button
+
+Add device modal:
+Fields:
+Arabic:
+- اسم الجهاز
+- نوع الجهاز
+- إضافة
+
+English:
+- Device name
+- Device type
+- Add
+
+After adding:
+- Call backend
+- Refresh room devices
+- Update bill if needed
+
+After deleting:
+- Call backend
+- Refresh room devices
+- Update bill if needed
+
+After toggling:
+- Call backend
+- Update UI immediately
+- Save in database
+
+==================================================
+FIX MODE BUTTONS IN UI
+==================================================
+
+The buttons currently feel fake.
+Fix them.
+
+When mode button clicked:
+- Call POST /api/mode
+- Update devices returned from backend
+- Update home visual
+- Update activity log
+- Show toast explaining exactly what happened
+
+Add visible activity log:
+Arabic:
+"آخر التغييرات"
+
+English:
+"Recent Changes"
+
+Show last 5 logs.
+
+Examples:
+- "تم تفعيل وضع التوفير: تم إطفاء الأجهزة الثقيلة"
+- "تم إطفاء المكيف في الصالون"
+- "تم إضافة جهاز جديد في المطبخ"
+
+==================================================
+IMPROVE HOUSE MAP UI
+==================================================
+
+Current house map is ugly and unclear.
+Improve it strongly.
+
+Requirements:
+- House map must be clearer and more impressive
+- No labels or buttons should overlap with house lines
+- No floating cards on top of house outline
+- Use separate room blocks
+- Rooms must be clickable
+- Room glow when active
+- Dim rooms when lights off
+- Device icons inside rooms
+- Battery clearly outside house as a separate element
+- Energy lines should not pass through text
+- Energy lines should be subtle and clean
+- Outage mode should visually dim the house and make battery glow
+
+Do not create a simple ugly house outline only.
+Make it visually better while keeping it understandable.
+
+==================================================
+LANDING PAGE IMPROVEMENT
+==================================================
+
+Improve landing page content and identity.
+
+Arabic:
+Badge:
+"منصة الخليل للمواطنين"
+
+Title:
+"منزلك الرقمي لإدارة الطاقة والبنية التحتية"
+
+Subtitle:
+"منصة مبسطة تابعة لمنظومة الخليل الذكية، تساعد المواطن على بناء نسخة رقمية من بيته، متابعة الفاتورة، إدارة البطارية، والتحكم بالأجهزة من خريطة المنزل."
+
+Buttons:
+- "إنشاء حساب"
+- "تسجيل الدخول"
+- "دخول المشرف"
+
+Section:
+"كيف تعمل المنصة؟"
+
+Steps:
+1. "سجّل أو ادخل لحسابك"
+2. "أضف غرف بيتك وأجهزتك"
+3. "تحكم من خريطة المنزل"
+4. "افهم فاتورتك وبطاريتك وقت الانقطاع"
+
+English:
+Badge:
+"Hebron Citizen Platform"
+
+Title:
+"Your Digital Home for Energy & Infrastructure"
+
+Subtitle:
+"A simple citizen platform connected to Hebron’s smart digital twin, helping users build a digital version of their home, understand their bill, manage battery storage, and control devices from the home map."
+
+Buttons:
+- "Create Account"
+- "Login"
+- "Admin Login"
+
+Steps:
+1. "Register or login"
+2. "Add rooms and devices"
+3. "Control from the home map"
+4. "Understand your bill and battery during outages"
+
+==================================================
+ADMIN FRONTEND
+==================================================
+
+Admin login:
+Use same auth endpoint or separate endpoint.
+Admin can login with:
+name: admin
+password: admin123
+
+After login, if role = admin, route to admin dashboard.
+
+Admin dashboard:
+Show:
+- total citizens
+- users by area
+- all users list
+- view details button
+
+Admin details:
+Show:
+- user info
+- setup
+- rooms
+- devices
+- bill
+- battery
+- current mode
+- activity logs
+
+Admin cannot control devices.
+
+==================================================
+LANGUAGE SUPPORT
+==================================================
+
+Keep Arabic/English toggle working.
+
+Use localStorage:
+homeTwinLanguage
+
+Arabic:
+RTL
+
+English:
+LTR
+
+All new pages must support both:
+- login
+- register
+- admin login
+- admin dashboard
+- device modal
+- room panel
+- activity log
+- errors
+- success messages
+
+==================================================
+IMPORTANT FINAL REQUIREMENTS
+==================================================
+
+Do not leave fake behavior.
+
+This must work:
+
+1. User can register and password is saved hashed in SQLite.
+2. User can log out and log in again with same password.
+3. Wrong password shows error.
+4. Admin can login with admin/admin123.
+5. Admin sees all registered users.
+6. Citizen setup is saved in database.
+7. Devices are saved in database.
+8. User can add devices to any room.
+9. User can delete devices from any room.
+10. User can toggle devices on/off.
+11. Mode buttons update real device states in database.
+12. Saving mode really turns off AC, heater, washing machine.
+13. Night mode really updates lights and devices.
+14. Outage mode really turns off heavy devices and powers essentials.
+15. Device states persist after page refresh.
+16. Bill updates after adding/deleting devices.
+17. Battery runtime works.
+18. Activity log shows what happened.
+19. House map is visually improved and not messy.
+20. Landing page clearly represents Hebron Citizen Platform for Energy & Infrastructure.
+21. Arabic/English works everywhere.
+22. The app runs correctly in Replit.
+
+Do not ask questions.
+Implement all fixes now.

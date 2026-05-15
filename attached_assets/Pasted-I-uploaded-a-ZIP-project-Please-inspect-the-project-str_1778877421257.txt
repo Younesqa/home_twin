@@ -1,0 +1,207 @@
+I uploaded a ZIP project. Please inspect the project structure first and make it run correctly on Replit.
+
+Important:
+Do NOT redesign the app.
+Do NOT rebuild the project.
+Do NOT change the UI unless there is a real error preventing the app from running.
+Do NOT rewrite existing logic.
+Do NOT remove features.
+Do NOT simplify the project.
+Only fix installation, run configuration, missing dependencies, environment issues, TypeScript errors, API connection issues, or real bugs that prevent existing features from working.
+
+The project likely contains:
+- a React frontend
+- an Express/Node backend
+- SQLite database
+- citizen login/register
+- admin login
+- digital home
+- complaints system
+- room/device control
+- assistant panel
+- Arabic/English language toggle
+
+Your task is to make the project run correctly in Replit and verify all main features.
+
+Step 1: Inspect project structure
+Find the frontend and backend folders.
+If they are inside:
+artifacts/my-home-twin
+artifacts/api-server
+then use those folders.
+
+Step 2: Install dependencies
+Install dependencies for both frontend and backend.
+If needed, create a root package.json that runs both frontend and backend together.
+Use concurrently if needed.
+
+Step 3: Fix Replit run configuration
+Make the Replit Run button start both:
+- frontend
+- backend API
+
+If needed, create or update:
+- root package.json
+- .replit file
+- vite config
+- backend port config
+
+Do not change app behavior unless required for it to run.
+
+Step 4: Verify backend
+Make sure the backend starts without errors.
+Make sure SQLite database is created.
+Make sure the admin account exists.
+
+Admin account must work as:
+username/name: admin
+password: admin
+
+Step 5: Verify frontend
+Make sure the frontend opens correctly.
+Make sure it connects to the backend API correctly.
+No blank page.
+No console errors.
+No broken routes.
+
+Step 6: Verify citizen flow
+Test this flow:
+
+1. Open landing page.
+2. Create a citizen account.
+3. Complete the home setup.
+4. Select number of rooms.
+5. Make sure the digital home is generated.
+6. Make sure rooms appear based on the selected room count.
+7. Make sure the user can click rooms.
+8. Make sure the user can toggle devices on/off.
+9. Make sure the user can add a device.
+10. Make sure the user can delete a device.
+11. Make sure the user can rename a room.
+12. Logout.
+13. Login again with the same citizen account.
+14. Make sure the same home loads again and is not reset.
+
+If any of these fail, fix only the bug causing the failure.
+
+Step 7: Verify room count logic
+The setup asks for full number of rooms.
+The total room count includes living room, kitchen, bathroom, and bedrooms.
+
+Logic:
+- Always include:
+  Living room
+  Kitchen
+  Bathroom
+
+- Remaining rooms become bedrooms.
+
+Example:
+If user selects 4 rooms total:
+Living room + Kitchen + Bathroom + Bedroom 1
+
+If user selects 5 rooms total:
+Living room + Kitchen + Bathroom + Bedroom 1 + Bedroom 2
+
+If user selects 6 rooms total:
+Living room + Kitchen + Bathroom + Bedroom 1 + Bedroom 2 + Bedroom 3
+
+Make sure the map does not always show the same fake room count.
+Make sure rooms do not overlap.
+
+Step 8: Verify mode buttons
+Test all mode buttons:
+- Normal Mode
+- Saving Mode
+- Night Mode
+- Power Outage Simulation
+
+Each button must actually update device states, not just show text.
+
+Saving Mode:
+Must turn off heavy devices like AC, heater, washing machine.
+
+Night Mode:
+Must turn on basic lights and turn off unnecessary devices.
+
+Outage Mode:
+Must turn off heavy devices and keep essentials if battery exists.
+
+After clicking a mode, open the rooms and verify devices are actually updated.
+
+Step 9: Verify complaints
+Make sure citizen can:
+- submit a complaint
+- see complaint status
+- see admin reply when available
+
+Make sure admin can:
+- see all complaints
+- reply to complaints
+- complaint status changes to replied
+
+Step 10: Verify admin flow
+The admin login page should show two clear big choices:
+
+1. Citizen Platform Admin
+2. Energy Engineer
+
+Citizen Platform Admin:
+- login with admin/admin
+- go to internal admin dashboard
+- see users
+- see complaints
+- reply to complaints
+
+Energy Engineer:
+- choose Energy Engineer
+- enter admin/admin
+- redirect to external URL
+
+There should be a constant in the code:
+ENERGY_ENGINEER_PORTAL_URL = "https://www.google.com"
+
+Do not change it now.
+Only confirm that it exists and redirects correctly.
+I will replace this URL later with my real website.
+
+Step 11: Verify assistant panel
+Make sure the in-app Home Assistant works.
+
+It should answer questions about:
+- bill
+- battery
+- outage
+- saving
+- devices
+
+The assistant must use current home data if possible:
+- estimated bill
+- battery runtime
+- existing devices
+- whether the user has a battery or not
+
+The assistant must NOT control devices.
+Device control should only happen from the home map and room panels.
+
+Step 12: Verify language toggle
+Make sure Arabic/English toggle works:
+- Arabic = RTL and all interface Arabic
+- English = LTR and all interface English
+- selected language stays after refresh
+
+Step 13: Do not break working things
+If a feature already works, do not rewrite it.
+Only fix actual broken behavior.
+Keep changes minimal and safe.
+
+Final report:
+After finishing, give me a short report:
+
+1. What commands run the project
+2. What files were changed
+3. What bugs were fixed
+4. Which features were tested
+5. Any feature that still has a problem
+
+Start by inspecting the files and making the project run.
