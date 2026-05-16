@@ -1,0 +1,445 @@
+Final project completion prompt.
+
+This is the final version. Be very careful.
+
+DO NOT rebuild the project.
+DO NOT redesign the whole app.
+DO NOT delete database data.
+DO NOT delete users, rooms, devices, complaints, invoices, wallet data, solar data, or admin data.
+DO NOT reset existing users.
+DO NOT remove working features.
+DO NOT rewrite working pages from scratch.
+
+Very important:
+Do NOT touch AdminLoginPage.
+Do NOT touch Energy Engineer login or redirect.
+The Energy Engineer feature already works. Leave it exactly as it is.
+
+Only finish and polish these features:
+1. Bills and wallet
+2. Solar energy page
+3. Solar setup question if missing
+4. Header labels/order
+5. Assistant answers for bills and solar
+6. Final safety testing
+
+==================================================
+PART 1: BILLS AND WALLET
+==================================================
+
+Make sure there is a protected page:
+/bills
+
+Arabic title:
+"الفواتير"
+
+English title:
+"Bills"
+
+The Bills page must show:
+- Wallet balance / رصيدك داخل التطبيق
+- Current bill / الفاتورة الحالية
+- Previous bills / الفواتير السابقة
+- Add balance / إضافة رصيد
+- Pay bill / دفع الفاتورة
+- Payment history / سجل المدفوعات
+
+Every citizen must have:
+1. One old paid invoice
+2. One current unpaid invoice
+
+Invoice amount must depend on setup billLevel:
+
+low = 120 NIS
+medium = 250 NIS
+high = 420 NIS
+
+If billLevel is missing, use medium = 250 NIS.
+
+Old paid invoice amount:
+current amount - 20
+but never less than 80.
+
+Examples:
+low:
+current unpaid = 120
+old paid = 100
+
+medium:
+current unpaid = 250
+old paid = 230
+
+high:
+current unpaid = 420
+old paid = 400
+
+Important:
+Do NOT duplicate invoices on refresh, login, setup edit, or opening Bills page.
+If invoices already exist, do not recreate them.
+
+Create invoices after setup is completed, or safely when the Bills summary is requested if the user already has setup but no invoices.
+
+Do not create invoices at registration time because billLevel is not known yet.
+
+If needed, create missing database tables safely only:
+
+CREATE TABLE IF NOT EXISTS wallets
+CREATE TABLE IF NOT EXISTS invoices
+CREATE TABLE IF NOT EXISTS wallet_transactions
+
+Never DROP tables.
+Never delete old data.
+
+Demo card top-up:
+- This is demo only.
+- Always succeeds if required fields are filled.
+- Do NOT store card number.
+- Do NOT store CVV.
+- Do NOT store expiry.
+- Only add balance to wallet and create a transaction.
+
+Pay bill:
+- If wallet balance is enough:
+  - subtract invoice amount
+  - mark invoice as paid
+  - set paid_at
+  - create transaction type bill_payment
+- If balance is not enough:
+  Arabic: "الرصيد غير كافٍ لدفع الفاتورة"
+  English: "Insufficient balance to pay the bill"
+
+Payment history:
+- Do not show transactions with amount 0.
+- topup and solar_sale should show + amount.
+- bill_payment should show - amount.
+- Show transaction description clearly.
+- Show NIS / شيكل.
+- Round money to 2 decimals.
+- Do not show NaN, undefined, or null.
+
+If current bill is paid:
+- Keep it visible.
+- Show:
+Arabic: "تم دفع فاتورة هذا الشهر بنجاح"
+English: "This month bill has been paid successfully"
+- Disable Pay button.
+- Button text:
+Arabic: "تم الدفع"
+English: "Paid"
+
+==================================================
+PART 2: RENAME OLD BILL PAGE
+==================================================
+
+The old bill/battery page is not the real bills page.
+
+Rename its label to:
+
+Arabic:
+"الفاتورة المتوقعة والبطارية"
+
+English:
+"Estimated Bill & Battery"
+
+Keep this page showing:
+- estimated bill
+- battery runtime
+- outage/battery info
+
+Do not delete it.
+
+==================================================
+PART 3: SOLAR SETUP QUESTION
+==================================================
+
+If not already added, add this setup question:
+
+Arabic:
+"هل يوجد لديك خلايا شمسية؟"
+
+English:
+"Do you have solar panels?"
+
+Options:
+- نعم / Yes
+- لا / No
+
+Save as boolean:
+hasSolar: true / false
+
+Do NOT save translated text.
+
+If home_setups table does not have has_solar column, add safely:
+ALTER TABLE home_setups ADD COLUMN has_solar INTEGER DEFAULT 0;
+
+Existing users with no value should be treated as hasSolar = false.
+
+Do not force existing users to redo setup.
+Do not reset homes.
+Do not delete rooms/devices.
+
+==================================================
+PART 4: SOLAR ENERGY PAGE
+==================================================
+
+Make sure there is a protected page:
+/solar
+
+Arabic title:
+"الطاقة الشمسية"
+
+English title:
+"Solar Energy"
+
+Show Solar Energy link in Header ONLY if:
+setup?.hasSolar === true
+
+If user hasSolar is false:
+- Do not show Solar link.
+- If user opens /solar manually, show:
+Arabic: "هذه الصفحة متاحة فقط للمستخدمين الذين لديهم خلايا شمسية."
+English: "This page is only available for users who have solar panels."
+
+Solar simulation rules:
+- generation_per_minute = 0.05 kWh
+- municipality buying rate = 0.60 NIS per kWh
+- available energy increases over time
+- user can sell available energy to municipality
+- earned money is added immediately to wallet
+
+If needed, create solar_accounts table safely:
+
+CREATE TABLE IF NOT EXISTS solar_accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  available_kwh REAL NOT NULL DEFAULT 0,
+  rate_per_kwh REAL NOT NULL DEFAULT 0.60,
+  generation_per_minute REAL NOT NULL DEFAULT 0.05,
+  last_updated_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+When setup hasSolar = true:
+- create solar account if missing.
+
+When setup hasSolar = false:
+- do not create account.
+- do not delete old solar data.
+- only hide page/link.
+
+Solar API:
+GET /api/solar/summary
+- If no solar, return hasSolar false.
+- If has solar:
+  - ensure account exists
+  - update available_kwh based on elapsed time
+  - return availableKwh, ratePerKwh, generationPerMinute, walletBalance
+
+POST /api/solar/sell
+Body:
+{ kwh: number }
+
+Validation:
+- kwh > 0
+- kwh <= availableKwh
+- user must have solar
+
+Logic:
+- update available energy first
+- earnings = kwh * ratePerKwh
+- subtract sold kWh
+- add earnings to wallet
+- create wallet transaction:
+  type = solar_sale
+  description = "بيع طاقة شمسية للبلدية"
+- return updated summary
+
+==================================================
+PART 5: SOLAR PAGE UI POLISH
+==================================================
+
+Modify SolarPage UI only for this part.
+
+Remove the card:
+Arabic: "القيمة التقريبية"
+English: "Estimated Value"
+
+Keep only these top cards:
+1. الطاقة المتاحة / Available Solar Energy
+2. سعر البيع للبلدية / Municipality Buying Rate
+3. رصيد المحفظة / Wallet Balance
+
+Add button:
+Arabic: "بيع كل الطاقة المتاحة"
+English: "Sell All Available Energy"
+
+Important:
+This button must NOT sell directly.
+It only copies availableKwh into the input box.
+
+Example:
+availableKwh = 0.12
+Click "بيع كل الطاقة المتاحة"
+Input becomes 0.12
+Wallet does not change.
+No sale happens yet.
+Then user clicks "بيع" / "Sell" manually.
+
+Input:
+- empty by default
+- not 0.00 by default
+- placeholder Arabic: "أدخل كمية الطاقة بالكيلو واط ساعة"
+- placeholder English: "Enter energy amount in kWh"
+
+Disable Sell button if:
+- input is empty
+- input <= 0
+- input > availableKwh
+- loading is true
+
+If availableKwh <= 0, show:
+Arabic: "لا توجد طاقة متاحة للبيع حالياً. اضغط تحديث الإنتاج لاحقاً."
+English: "No solar energy is available to sell right now. Refresh production later."
+
+Keep/Add Refresh Production button:
+Arabic: "تحديث الإنتاج"
+English: "Refresh Production"
+
+After selling, show:
+Arabic: "تم بيع X kWh وإضافة Y شيكل إلى رصيدك"
+English: "Sold X kWh and added Y NIS to your wallet"
+
+Round:
+- kWh to 2 decimals
+- money to 2 decimals
+
+Do not show NaN, undefined, or null.
+
+Explanation text:
+Arabic:
+"هذه محاكاة تعليمية. يتم احتساب إنتاج الطاقة الشمسية افتراضياً داخل التطبيق، ويمكن بيع الطاقة المتاحة للبلدية وإضافة قيمتها إلى رصيدك."
+
+English:
+"This is an educational simulation. Solar production is calculated virtually inside the app, and available energy can be sold to the municipality and added to your wallet balance."
+
+==================================================
+PART 6: HEADER
+==================================================
+
+Header order should be:
+
+Arabic:
+- منزلي
+- الفواتير
+- الطاقة الشمسية فقط إذا عنده خلايا شمسية
+- الفاتورة المتوقعة والبطارية
+- الشكاوى
+- تعديل المنزل
+- خروج
+
+English:
+- My Home
+- Bills
+- Solar Energy only if user has solar panels
+- Estimated Bill & Battery
+- Complaints
+- Edit Home
+- Logout
+
+Keep Arabic RTL and English LTR working.
+
+==================================================
+PART 7: ASSISTANT
+==================================================
+
+Assistant should understand Bills and Solar questions.
+
+For bills keywords:
+Arabic:
+دفع، رصيد، فواتير، فاتورة حالية، فواتير سابقة
+
+English:
+pay, balance, bills, current bill, previous bills
+
+Answer:
+Arabic:
+"يمكنك دفع الفاتورة من صفحة الفواتير. أضف رصيداً إلى محفظتك داخل التطبيق ثم اضغط دفع الفاتورة."
+
+English:
+"You can pay from the Bills page. Add balance to your app wallet, then click Pay Bill."
+
+For solar keywords:
+Arabic:
+شمسية، خلايا، طاقة شمسية، أبيع، بلدية
+
+English:
+solar, panels, sell energy, municipality
+
+Answer:
+Arabic:
+"إذا كان لديك خلايا شمسية، يمكنك فتح صفحة الطاقة الشمسية وبيع جزء من الطاقة المتاحة للبلدية. سيتم إضافة المبلغ مباشرة إلى رصيدك داخل التطبيق."
+
+English:
+"If you have solar panels, open the Solar Energy page and sell part of your available energy to the municipality. The earned amount will be added directly to your app wallet."
+
+Assistant must NOT:
+- pay bills
+- sell solar energy
+- control devices
+
+It only explains.
+
+==================================================
+PART 8: FINAL TESTS
+==================================================
+
+Test these before final report:
+
+1. Register new citizen.
+2. Complete setup with billLevel medium.
+3. Bills page shows:
+   - current unpaid invoice = 250 NIS
+   - previous paid invoice = 230 NIS
+4. Add 300 NIS wallet balance.
+5. Pay current bill.
+6. Payment history shows +300 and -250 clearly.
+7. Refresh page and login/logout.
+8. No duplicate invoices.
+9. New user with solar panels = yes:
+   - Solar link appears.
+   - Solar page works.
+10. New user with solar panels = no:
+   - Solar link hidden.
+   - /solar shows friendly message.
+11. Sell All Available Energy only fills input, does not sell.
+12. Sell button sells entered kWh and adds wallet balance.
+13. Cannot sell more than available.
+14. Complaints still work.
+15. Room rename still works.
+16. Devices still work.
+17. Arabic/English toggle still works.
+18. Estimated Bill & Battery page still works.
+19. Admin dashboard still works.
+20. Do not test or modify Energy Engineer code unless simply confirming it still opens.
+
+==================================================
+FINAL REPORT
+==================================================
+
+After finishing, give a short report:
+
+1. Files changed
+2. Database changes
+3. Routes added or fixed
+4. What was fixed in Bills
+5. What was fixed in Solar
+6. What was tested
+7. Any remaining issue
+
+Remember:
+Do NOT touch AdminLoginPage.
+Do NOT touch Energy Engineer redirect.
+Do NOT add extra features.
+Do NOT redesign.
+Keep changes minimal and safe.

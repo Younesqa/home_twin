@@ -1,0 +1,122 @@
+Modify ONLY the Solar Energy page UI and behavior.
+
+Do NOT rebuild the project.
+Do NOT change backend logic unless absolutely required.
+Do NOT change wallet, invoices, bills, complaints, rooms, devices, admin, or setup.
+Only update the Solar Energy page.
+
+File likely:
+artifacts/my-home-twin/src/pages/SolarPage.tsx
+
+Required changes:
+
+1. Remove the card/box called:
+Arabic: "القيمة التقريبية"
+English: "Estimated Value"
+
+Do not show estimatedValue as a separate top card anymore.
+
+2. Keep these top cards only:
+- الطاقة المتاحة / Available Solar Energy
+- سعر البيع للبلدية / Municipality Buying Rate
+- رصيد المحفظة / Wallet Balance
+
+3. In the selling section, add a new button:
+
+Arabic:
+"بيع كل الطاقة المتاحة"
+
+English:
+"Sell All Available Energy"
+
+Important behavior:
+This button must NOT sell immediately.
+It should only copy the current availableKwh value into the input textbox.
+
+Example:
+If availableKwh = 0.12
+When user clicks "بيع كل الطاقة المتاحة"
+The input value becomes:
+0.12
+
+Then the user must manually click:
+Arabic: "بيع"
+English: "Sell"
+
+4. Keep the normal Sell button behavior:
+- It sells only the amount currently written in the textbox.
+- It updates wallet balance.
+- It decreases available solar energy.
+- It shows success message.
+
+5. Improve the input:
+- Placeholder Arabic: "أدخل كمية الطاقة بالكيلو واط ساعة"
+- Placeholder English: "Enter energy amount in kWh"
+- Do not default it to 0.00
+- Empty input is allowed visually, but Sell button should be disabled until a valid number is entered.
+
+6. Disable the Sell button when:
+- input is empty
+- input is 0
+- input is negative
+- input is greater than availableKwh
+- loading is true
+
+7. If availableKwh is 0 or less:
+- Disable "Sell All Available Energy"
+- Disable "Sell"
+- Show small message:
+Arabic:
+"لا توجد طاقة متاحة للبيع حالياً. اضغط تحديث الإنتاج لاحقاً."
+English:
+"No solar energy is available to sell right now. Refresh production later."
+
+8. Add or keep Refresh Production button:
+Arabic:
+"تحديث الإنتاج"
+English:
+"Refresh Production"
+
+Behavior:
+When clicked, call the solar summary API again and update availableKwh.
+
+9. Success message after selling:
+Arabic:
+"تم بيع X kWh وإضافة Y شيكل إلى رصيدك"
+English:
+"Sold X kWh and added Y NIS to your wallet"
+
+Where:
+X = sold kWh
+Y = earned amount
+
+10. Keep the explanation text at the bottom, but make it cleaner:
+
+Arabic:
+"هذه محاكاة تعليمية. يتم احتساب إنتاج الطاقة الشمسية افتراضياً داخل التطبيق، ويمكن بيع الطاقة المتاحة للبلدية وإضافة قيمتها إلى رصيدك."
+
+English:
+"This is an educational simulation. Solar production is calculated virtually inside the app, and available energy can be sold to the municipality and added to your wallet balance."
+
+11. Make sure RTL Arabic layout still looks good.
+12. Make sure English layout still looks good.
+13. Do not show weird values like NaN, undefined, or null.
+14. Round displayed kWh to 2 decimals.
+15. Round displayed money to 2 decimals.
+
+Acceptance test:
+- Open Solar Energy page.
+- Estimated Value card is gone.
+- Available energy card appears.
+- Municipality rate card appears.
+- Wallet balance card appears.
+- Click "بيع كل الطاقة المتاحة".
+Expected:
+The available kWh value is copied into the textbox only.
+No sale happens yet.
+- Click "بيع".
+Expected:
+Energy is sold, wallet balance increases, available kWh decreases, success message appears.
+- Click Refresh Production.
+Expected:
+availableKwh updates from backend.

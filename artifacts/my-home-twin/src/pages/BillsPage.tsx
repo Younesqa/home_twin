@@ -57,7 +57,7 @@ export default function BillsPage() {
   const handlePayInvoice = async (invoice: Invoice) => {
     if (!summary) return;
     if (summary.wallet.balance < invoice.amount) {
-      toast({ title: t("الرصيد غير كافٍ. الرجاء إضافة رصيد أولاً.", "Insufficient balance. Please add balance first."), variant: "destructive" });
+      toast({ title: t("الرصيد غير كافٍ لدفع الفاتورة", "Insufficient balance to pay the bill"), variant: "destructive" });
       return;
     }
     setPayingInvoice(true);
@@ -78,8 +78,13 @@ export default function BillsPage() {
   const statusLabel = (status: string) =>
     status === "paid" ? t("مدفوعة", "Paid") : t("مستحقة", "Due");
 
-  const txLabel = (type: string) =>
-    type === "topup" ? t("إضافة رصيد", "Wallet Top-up") : t("دفع فاتورة", "Bill Payment");
+  const txLabel = (type: string) => {
+    if (type === "topup") return t("إضافة رصيد", "Wallet Top-up");
+    if (type === "solar_sale") return t("بيع طاقة شمسية للبلدية", "Solar Energy Sale");
+    return t("دفع فاتورة", "Bill Payment");
+  };
+
+  const txIsCredit = (type: string) => type === "topup" || type === "solar_sale";
 
   return (
     <div className="min-h-screen flex flex-col relative">
@@ -157,9 +162,12 @@ export default function BillsPage() {
                       </span>
                     </div>
                     {summary.currentInvoice.status === "paid" ? (
-                      <div className="w-full h-11 rounded-2xl bg-white/5 border border-emerald-500/20 text-emerald-400 font-bold text-sm flex items-center justify-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        {t("تم الدفع", "Paid")}
+                      <div className="space-y-2">
+                        <p className="text-center text-emerald-400/80 text-xs">{t("تم دفع فاتورة هذا الشهر بنجاح", "This month bill has been paid successfully")}</p>
+                        <div className="w-full h-11 rounded-2xl bg-white/5 border border-emerald-500/20 text-emerald-400 font-bold text-sm flex items-center justify-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          {t("تم الدفع", "Paid")}
+                        </div>
                       </div>
                     ) : (
                       <button
@@ -220,16 +228,16 @@ export default function BillsPage() {
                     {summary.transactions.map((tx) => (
                       <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/40 border border-white/5">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${tx.type === "topup" ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
-                            {tx.type === "topup" ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${txIsCredit(tx.type) ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"}`}>
+                            {txIsCredit(tx.type) ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
                           </div>
                           <div>
                             <p className="text-white text-sm font-medium">{txLabel(tx.type)}</p>
                             <p className="text-white/35 text-xs">{formatDate(tx.created_at)}</p>
                           </div>
                         </div>
-                        <p className={`font-semibold text-sm ${tx.type === "topup" ? "text-emerald-400" : "text-red-400"}`}>
-                          {tx.type === "topup" ? "+" : "-"}{tx.amount.toFixed(0)} ₪
+                        <p className={`font-semibold text-sm ${txIsCredit(tx.type) ? "text-emerald-400" : "text-red-400"}`}>
+                          {txIsCredit(tx.type) ? "+" : "-"}{tx.amount.toFixed(2)} ₪
                         </p>
                       </div>
                     ))}

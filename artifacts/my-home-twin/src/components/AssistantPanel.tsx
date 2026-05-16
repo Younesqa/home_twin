@@ -47,9 +47,9 @@ export function AssistantPanel() {
         `Your battery capacity is ${battery.capacity} kWh and lasts about ${battery.runtimeHours} hours for essentials like lights, fridge, and Wi-Fi.`
       );
     }
-    if (lower.includes("شمس") || lower.includes("شمسي") || lower.includes("solar")) {
+    if (lower.includes("شمس") || lower.includes("شمسي") || lower.includes("شمسية") || lower.includes("خلايا") || lower.includes("أبيع") || lower.includes("بلدية") || lower.includes("solar") || lower.includes("panels") || lower.includes("sell energy") || lower.includes("municipality")) {
       if (!setup?.has_solar) return t("لا توجد خلايا شمسية مسجلة. يمكنك تعديل إعدادات المنزل لتفعيل ميزة الطاقة الشمسية.", "No solar panels registered. You can edit your home settings to enable solar energy.");
-      return t("لديك خلايا شمسية مسجلة. يمكنك زيارة صفحة الطاقة الشمسية لبيع الفائض للبلدية وإضافة الرصيد لمحفظتك.", "You have solar panels registered. Visit the Solar Energy page to sell surplus to the municipality and add funds to your wallet.");
+      return t("إذا كان لديك خلايا شمسية، يمكنك فتح صفحة الطاقة الشمسية وبيع جزء من الطاقة المتاحة للبلدية. سيتم إضافة المبلغ مباشرة إلى رصيدك داخل التطبيق.", "If you have solar panels, open the Solar Energy page and sell part of your available energy to the municipality. The earned amount will be added directly to your app wallet.");
     }
     if (lower.includes("انقطاع") || lower.includes("outage") || lower.includes("كهرباء")) {
       const list = essentials.length ? essentials.slice(0, 5).join("، ") : t("الإضاءة والثلاجة والواي فاي", "lights, fridge, and Wi-Fi");
