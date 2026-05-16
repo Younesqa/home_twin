@@ -27,7 +27,7 @@ export function AssistantPanel() {
     { ar: "كم فاتورتي المتوقعة؟", en: "What is my estimated bill?" },
     { ar: "قديش بتقعد البطارية؟", en: "How long does my battery last?" },
     { ar: "شو أشغل وقت الانقطاع؟", en: "What can I run during outage?" },
-    { ar: "شو أكثر جهاز مأثر؟", en: "What affects my bill most?" },
+    { ar: "كيف أدفع الفاتورة؟", en: "How do I pay my bill?" },
     { ar: "كيف أوفر؟", en: "How can I save?" },
   ];
 
@@ -69,7 +69,14 @@ export function AssistantPanel() {
     if (lower.includes("وضع") || lower.includes("mode")) {
       return t(`الوضع الحالي هو: ${mode}. يمكنك تغييره من أزرار الأوضاع أسفل خريطة المنزل.`, `Current mode is: ${mode}. You can change it from the mode buttons below the home map.`);
     }
-    return t("أستطيع مساعدتك في الفاتورة، البطارية، التوفير، أو الانقطاع. التحكم بالأجهزة يكون من خريطة البيت فقط.", "I can help with bill, battery, saving, or outage questions. Device control is only from the home map.");
+    if (lower.includes("دفع") || lower.includes("رصيد") || lower.includes("فواتير") || lower.includes("فاتورة حالية") || lower.includes("فواتير سابقة") ||
+        lower.includes("pay") || lower.includes("balance") || lower.includes("bills") || lower.includes("current bill") || lower.includes("previous bills")) {
+      return t(
+        "يمكنك دفع الفاتورة من صفحة الفواتير. أضف رصيداً إلى محفظتك داخل التطبيق ثم اضغط دفع الفاتورة.",
+        "You can pay from the Bills page. Add balance to your app wallet, then click Pay Bill."
+      );
+    }
+    return t("أستطيع مساعدتك في الفاتورة، البطارية، التوفير، الانقطاع، أو الفواتير والدفع. التحكم بالأجهزة يكون من خريطة البيت فقط.", "I can help with bill, battery, saving, outage, or billing questions. Device control is only from the home map.");
   };
 
   const handleSend = (text: string) => {

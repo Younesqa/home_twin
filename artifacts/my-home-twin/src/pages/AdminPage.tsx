@@ -3,12 +3,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useHome } from "@/contexts/HomeContext";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { api, type ApiUser, type AdminUserDetail, type Complaint } from "@/lib/api";
-import { Shield, Users, MapPin, ChevronRight, X, Home, Battery, Zap, LogOut, RefreshCw, MessageSquare, Send } from "lucide-react";
+import { api, type ApiUser, type AdminUserDetail, type Complaint, type AdminInvoiceRow } from "@/lib/api";
+import { Shield, Users, MapPin, ChevronRight, X, Home, Battery, Zap, LogOut, RefreshCw, MessageSquare, Send, Wallet } from "lucide-react";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useToast } from "@/hooks/use-toast";
 
-type AdminTab = "citizens" | "complaints";
+type AdminTab = "citizens" | "complaints" | "billing";
 
 export default function AdminPage() {
   const { t } = useLanguage();
@@ -25,14 +25,18 @@ export default function AdminPage() {
   const [reply, setReply] = useState("");
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [loadingMain, setLoadingMain] = useState(true);
+  const [adminInvoices, setAdminInvoices] = useState<AdminInvoiceRow[]>([]);
 
   const loadAdmin = async () => {
     setLoadingMain(true);
     try {
-      const [s, u, c] = await Promise.all([api.adminStats(), api.adminUsers(), api.adminComplaints()]);
+      const [s, u, c, b] = await Promise.all([
+        api.adminStats(), api.adminUsers(), api.adminComplaints(), api.adminBilling()
+      ]);
       setStats(s);
       setUsers(u.users);
       setComplaints(c.complaints);
+      setAdminInvoices(b.invoices);
     } finally {
       setLoadingMain(false);
     }
@@ -72,9 +76,42 @@ export default function AdminPage() {
 
       <main className="relative z-10 max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6"><h1 className="text-2xl font-bold text-white mb-1">{t("لوحة مشرف منصة الخليل", "Hebron Platform Admin")}</h1><p className="text-white/40 text-sm">{t("عرض بيانات المواطنين والشكاوى والرد عليها", "View citizen data, complaints, and replies")}</p></div>
-        <div className="flex gap-2 mb-8"><button onClick={() => setTab("citizens")} className={`px-4 h-10 rounded-xl border text-sm font-semibold ${tab === "citizens" ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/25" : "bg-white/4 text-white/45 border-white/10"}`}><Users className="w-4 h-4 inline mx-1" />{t("المواطنين", "Citizens")}</button><button onClick={() => setTab("complaints")} className={`px-4 h-10 rounded-xl border text-sm font-semibold ${tab === "complaints" ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/25" : "bg-white/4 text-white/45 border-white/10"}`}><MessageSquare className="w-4 h-4 inline mx-1" />{t("الشكاوى", "Complaints")} <span className="text-xs opacity-70">({complaints.filter(c => c.status === "open").length})</span></button></div>
+        <div className="flex gap-2 mb-8 flex-wrap">
+          <button onClick={() => setTab("citizens")} className={`px-4 h-10 rounded-xl border text-sm font-semibold ${tab === "citizens" ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/25" : "bg-white/4 text-white/45 border-white/10"}`}><Users className="w-4 h-4 inline mx-1" />{t("المواطنين", "Citizens")}</button>
+          <button onClick={() => setTab("complaints")} className={`px-4 h-10 rounded-xl border text-sm font-semibold ${tab === "complaints" ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/25" : "bg-white/4 text-white/45 border-white/10"}`}><MessageSquare className="w-4 h-4 inline mx-1" />{t("الشكاوى", "Complaints")} <span className="text-xs opacity-70">({complaints.filter(c => c.status === "open").length})</span></button>
+          <button onClick={() => setTab("billing")} className={`px-4 h-10 rounded-xl border text-sm font-semibold ${tab === "billing" ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/25" : "bg-white/4 text-white/45 border-white/10"}`}><Wallet className="w-4 h-4 inline mx-1" />{t("الفواتير", "Billing")}</button>
+        </div>
 
-        {loadingMain ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div> : tab === "citizens" ? <>
+        {loadingMain ? <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div> : tab === "billing" ? (
+          <div className="rounded-2xl bg-white/3 border border-white/8 overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
+              <h2 className="font-semibold text-white">{t("جميع الفواتير والمدفوعات", "All Invoices & Payments")}</h2>
+              <button onClick={loadAdmin} className="p-2 rounded-lg hover:bg-white/8 text-white/40 hover:text-white/80"><RefreshCw className="w-4 h-4" /></button>
+            </div>
+            {adminInvoices.length === 0 ? (
+              <div className="py-10 text-center text-white/30 text-sm">{t("لا توجد فواتير بعد", "No invoices yet")}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-white/8">{[t("المستخدم","User"), t("المنطقة","Area"), t("الشهر","Month"), t("المبلغ","Amount"), t("النوع","Type"), t("الحالة","Status"), t("الرصيد","Balance")].map(h => <th key={h} className="px-4 py-3 text-white/40 font-medium text-start">{h}</th>)}</tr></thead>
+                  <tbody className="divide-y divide-white/5">
+                    {adminInvoices.map(inv => (
+                      <tr key={inv.id} className="hover:bg-white/3">
+                        <td className="px-4 py-3 text-white">{inv.user_name}</td>
+                        <td className="px-4 py-3 text-white/60">{inv.user_area}</td>
+                        <td className="px-4 py-3 text-white/60">{inv.month}</td>
+                        <td className="px-4 py-3 text-white font-semibold">{inv.amount.toFixed(0)} ₪</td>
+                        <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full border ${inv.type === "current" ? "text-cyan-300 bg-cyan-500/10 border-cyan-500/25" : "text-violet-300 bg-violet-500/10 border-violet-500/25"}`}>{inv.type === "current" ? t("حالية","Current") : t("سابقة","Previous")}</span></td>
+                        <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full border ${inv.status === "paid" ? "text-emerald-300 bg-emerald-500/10 border-emerald-500/25" : "text-amber-300 bg-amber-500/10 border-amber-500/25"}`}>{inv.status === "paid" ? t("مدفوعة","Paid") : t("غير مدفوعة","Unpaid")}</span></td>
+                        <td className="px-4 py-3 text-white/60">{Number(inv.wallet_balance).toFixed(0)} ₪</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : tab === "citizens" ? <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"><motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} className="p-5 rounded-2xl bg-white/4 border border-white/8"><Users className="w-6 h-6 text-cyan-400 mb-3" /><p className="text-3xl font-bold text-white mb-1">{stats?.totalCitizens ?? 0}</p><p className="text-white/50 text-sm">{t("إجمالي المواطنين", "Total Citizens")}</p></motion.div>{stats?.byArea.slice(0, 3).map(a => <motion.div key={a.area} className="p-5 rounded-2xl bg-white/4 border border-white/8"><MapPin className="w-5 h-5 text-violet-400 mb-3" /><p className="text-2xl font-bold text-white mb-1">{a.count}</p><p className="text-white/50 text-sm truncate">{a.area}</p></motion.div>)}</div>
           <div className="rounded-2xl bg-white/3 border border-white/8 overflow-hidden mb-8"><div className="px-5 py-4 border-b border-white/8 flex items-center justify-between"><h2 className="font-semibold text-white">{t("قائمة المواطنين المسجلين", "Registered Citizens")}</h2><button onClick={loadAdmin} className="p-2 rounded-lg hover:bg-white/8 text-white/40 hover:text-white/80"><RefreshCw className="w-4 h-4" /></button></div>{users.length === 0 ? <div className="py-10 text-center text-white/30 text-sm">{t("لا يوجد مواطنون مسجلون بعد", "No citizens registered yet")}</div> : <div className="divide-y divide-white/5">{users.map(u => <div key={u.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/3 group"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm font-bold">{u.name.charAt(0)}</div><div><p className="text-white font-medium text-sm">{u.name}</p><p className="text-white/40 text-xs">{u.area}</p></div></div><button onClick={() => viewUser(u.id)} className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 opacity-0 group-hover:opacity-100 transition-all">{t("تفاصيل", "Details")}<ChevronRight className="w-3 h-3" /></button></div>)}</div>}</div>
         </> : <div className="space-y-3">{complaints.length === 0 ? <div className="p-10 rounded-3xl bg-white/4 border border-white/10 text-center text-white/35">{t("لا توجد شكاوى", "No complaints")}</div> : complaints.map(c => <div key={c.id} className="p-4 rounded-2xl bg-white/4 border border-white/10"><div className="flex items-start justify-between gap-3 mb-2"><div><h3 className="text-white font-semibold">{c.title}</h3><p className="text-white/35 text-xs">{c.user_name} · {c.user_area}</p></div><span className={`text-xs px-2 py-1 rounded-full border ${c.status === "replied" ? "text-emerald-300 bg-emerald-500/10 border-emerald-500/25" : "text-amber-300 bg-amber-500/10 border-amber-500/25"}`}>{statusLabel(c.status)}</span></div><p className="text-white/60 text-sm leading-6 mb-3">{c.message}</p>{c.reply && <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-3"><p className="text-emerald-300 text-xs font-bold mb-1">{t("الرد", "Reply")}</p><p className="text-white/80 text-sm">{c.reply}</p></div>}<button onClick={() => { setSelectedComplaint(c); setReply(c.reply || ""); }} className="h-9 px-4 rounded-xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 text-sm font-semibold">{c.reply ? t("تعديل الرد", "Edit Reply") : t("رد", "Reply")}</button></div>)}</div>}

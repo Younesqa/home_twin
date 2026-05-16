@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useHome } from "@/contexts/HomeContext";
 import { LanguageToggle } from "./LanguageToggle";
-import { Zap, Battery, Edit3, LogOut, Home, MessageSquare } from "lucide-react";
+import { Zap, Battery, Edit3, LogOut, Home, MessageSquare, Wallet } from "lucide-react";
 
 export function Header() {
   const { t } = useLanguage();
@@ -13,7 +13,8 @@ export function Header() {
 
   const navLinks = [
     { path: "/home", ar: "منزلي", en: "My Home", Icon: Home },
-    { path: "/bill", ar: "الفاتورة والبطارية", en: "Bill & Battery", Icon: Battery },
+    { path: "/bills", ar: "الفواتير", en: "Bills", Icon: Wallet },
+    { path: "/bill", ar: "الفاتورة المتوقعة والبطارية", en: "Estimated Bill & Battery", Icon: Battery },
     { path: "/complaints", ar: "الشكاوى", en: "Complaints", Icon: MessageSquare },
   ];
 

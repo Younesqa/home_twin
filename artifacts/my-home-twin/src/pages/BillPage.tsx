@@ -40,7 +40,7 @@ export default function BillPage() {
         <Header />
 
         <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
-          <h1 className="text-2xl font-bold text-white mb-1">{t("الفاتورة والبطارية", "Bill & Battery")}</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">{t("الفاتورة المتوقعة والبطارية", "Estimated Bill & Battery")}</h1>
           <p className="text-white/40 text-sm mb-8">{t("ملخص مبسط لاستهلاك منزلك", "Simplified summary of your home consumption")}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

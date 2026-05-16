@@ -7,6 +7,7 @@ import devicesRouter from "./devices.js";
 import modeRouter from "./mode.js";
 import adminRouter from "./admin.js";
 import complaintsRouter from "./complaints.js";
+import billingRouter from "./billing.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/devices", devicesRouter);
 router.use("/mode", modeRouter);
 router.use("/admin", adminRouter);
 router.use("/complaints", complaintsRouter);
+router.use("/billing", billingRouter);
 
 export default router;

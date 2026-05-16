@@ -1,0 +1,689 @@
+Add one new feature to the current project: a demo billing and wallet payment system.
+
+Important:
+Do NOT rebuild the app.
+Do NOT redesign the whole app.
+Do NOT break existing login, home, rooms, devices, complaints, admin, or assistant features.
+Only add the billing/payment feature and fix the Energy Engineer session behavior.
+
+This is a DEMO payment system for a graduation project.
+Do NOT integrate a real payment gateway.
+Do NOT process real cards.
+Do NOT store real card numbers.
+Do NOT store CVV.
+Card payment must always succeed for demo purposes.
+
+==================================================
+PART 1: FIX ENERGY ENGINEER SESSION BEHAVIOR
+==================================================
+
+Fix AdminLoginPage.tsx.
+
+Problem:
+Energy Engineer redirect works the first time, but when returning to admin login page, it sometimes redirects again or remembers previous state.
+
+Required behavior:
+Every time the user opens the admin login page, it must start from the access type selection screen:
+1. Citizen Platform Admin
+2. Energy Engineer
+
+It must NOT automatically redirect.
+It must NOT remember previous selected login type.
+It must NOT auto-submit.
+
+Implementation:
+In AdminLoginPage.tsx:
+- Import useEffect.
+- On component mount, reset:
+  loginType = null
+  name = ""
+  password = ""
+  error = ""
+  loading = false
+
+Add:
+useEffect(() => {
+  setLoginType(null);
+  setName("");
+  setPassword("");
+  setError("");
+  setLoading(false);
+}, []);
+
+When choosing Energy Engineer:
+- setLoginType("energyEngineer")
+- clear name/password/error
+- no redirect yet
+
+Energy Engineer redirect only happens inside handleSubmit when:
+loginType === "energyEngineer"
+AND name.trim() === "admin"
+AND password.trim() === "admin"
+
+Before redirect:
+localStorage.removeItem("homeTwinToken");
+localStorage.removeItem("homeTwinAdminSession");
+sessionStorage.clear();
+
+Then:
+window.location.assign(ENERGY_ENGINEER_PORTAL_URL);
+
+Add:
+form autoComplete="off"
+username input autoComplete="off"
+password input autoComplete="new-password"
+
+Search project for:
+ENERGY_ENGINEER_PORTAL_URL
+google.com
+window.location.href
+window.location.assign
+
+Make sure there is no other automatic redirect.
+
+==================================================
+PART 2: RENAME OLD BILL PAGE
+==================================================
+
+The old bill/battery page is not the real bills page.
+Rename it in the navigation and titles.
+
+Old:
+Arabic: "الفاتورة والبطارية"
+English: "Bill & Battery"
+
+New:
+Arabic: "الفاتورة المتوقعة والبطارية"
+English: "Estimated Bill & Battery"
+
+This page should keep showing:
+- estimated bill
+- simple bill explanation
+- battery runtime
+- what battery can power during outage
+
+Do not remove it.
+
+==================================================
+PART 3: ADD NEW REAL BILLS PAGE
+==================================================
+
+Add a new page:
+
+Arabic:
+"الفواتير"
+
+English:
+"Bills"
+
+Route:
+Frontend:
+/bills
+
+Add it to Header navigation:
+Arabic: "الفواتير"
+English: "Bills"
+
+This page is separate from Estimated Bill & Battery.
+
+The Bills page must show:
+
+1. Wallet balance
+Arabic:
+"رصيدك داخل التطبيق"
+
+English:
+"App Wallet Balance"
+
+2. Current bill
+Arabic:
+"الفاتورة الحالية"
+
+English:
+"Current Bill"
+
+3. Previous bills
+Arabic:
+"الفواتير السابقة"
+
+English:
+"Previous Bills"
+
+4. Add balance button
+Arabic:
+"إضافة رصيد"
+
+English:
+"Add Balance"
+
+5. Pay bill button
+Arabic:
+"دفع الفاتورة"
+
+English:
+"Pay Bill"
+
+6. Payment history
+Arabic:
+"سجل المدفوعات"
+
+English:
+"Payment History"
+
+==================================================
+PART 4: DATABASE TABLES
+==================================================
+
+Update SQLite database.
+
+Add these tables if they do not exist:
+
+1. wallets
+
+CREATE TABLE IF NOT EXISTS wallets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  balance REAL NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+2. invoices
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  amount REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unpaid',
+  type TEXT NOT NULL DEFAULT 'current',
+  month TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  paid_at TEXT,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+Invoice status:
+- unpaid
+- paid
+
+Invoice type:
+- current
+- previous
+
+3. wallet_transactions
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  amount REAL NOT NULL,
+  description TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+Transaction type:
+- topup
+- bill_payment
+
+Important:
+Each citizen must have one wallet.
+Create wallet automatically after registration if it does not exist.
+
+==================================================
+PART 5: DEMO INVOICE LOGIC
+==================================================
+
+When a user completes home setup, create a current invoice automatically if he does not already have one unpaid current invoice.
+
+Current invoice amount should be based on the estimated bill logic.
+
+Example:
+If estimated bill = 285:
+Create invoice:
+title = "فاتورة هذا الشهر"
+amount = 285
+status = unpaid
+type = current
+month = current month like "2026-05"
+
+Arabic display:
+"فاتورة هذا الشهر"
+
+English display:
+"This Month Bill"
+
+Also create a few demo previous invoices only once per user if none exist:
+Previous bills:
+- Last month: paid
+- Two months ago: paid
+- Three months ago: unpaid or paid randomly but deterministic
+
+Amounts can be close to current bill:
+current - 20
+current + 15
+current - 35
+
+Do not create duplicate invoices on every refresh.
+Only create demo previous invoices once.
+
+==================================================
+PART 6: BACKEND API
+==================================================
+
+Create route file if needed:
+artifacts/api-server/src/routes/billing.ts
+
+Add it to routes/index.ts:
+router.use("/billing", billingRouter)
+
+Protected citizen routes:
+
+GET /api/billing/summary
+
+Returns:
+{
+  wallet: {
+    balance
+  },
+  currentInvoice,
+  previousInvoices,
+  transactions
+}
+
+currentInvoice:
+latest unpaid or current invoice.
+
+previousInvoices:
+all old invoices ordered newest first.
+
+transactions:
+latest wallet transactions ordered newest first.
+
+POST /api/billing/topup
+
+Body:
+{
+  amount,
+  cardholderName,
+  cardNumber,
+  expiry,
+  cvv
+}
+
+Demo validation:
+- amount must be positive
+- cardholderName required
+- cardNumber required but do not store it
+- expiry required but do not store it
+- cvv required but do not store it
+
+Important:
+Do NOT store cardNumber.
+Do NOT store cvv.
+Do NOT store expiry.
+Only simulate payment.
+
+Always succeed if fields are filled.
+
+Logic:
+- Add amount to wallet balance.
+- Insert transaction:
+type = topup
+amount = amount
+description = "إضافة رصيد" / "Wallet top-up"
+- Add activity log:
+Arabic: "تم إضافة رصيد إلى المحفظة"
+English: "Wallet balance added"
+- Return updated billing summary.
+
+POST /api/billing/pay-invoice/:invoiceId
+
+Logic:
+- Get invoice for current user.
+- If not found, return error.
+- If already paid, return error.
+- Get wallet.
+- If wallet balance < invoice amount:
+  return error:
+  Arabic: "الرصيد غير كافٍ لدفع الفاتورة"
+  English: "Insufficient balance to pay the bill"
+
+If enough balance:
+- Subtract invoice amount from wallet.
+- Set invoice status = paid.
+- Set paid_at = now.
+- Insert transaction:
+type = bill_payment
+amount = invoice.amount
+description = "دفع فاتورة الكهرباء" / "Electricity bill payment"
+- Add activity log:
+Arabic: "تم دفع الفاتورة بنجاح"
+English: "Bill paid successfully"
+- Return updated billing summary.
+
+Admin route optional:
+GET /api/admin/billing
+Admin only.
+Show all invoices and payments with citizen name and area.
+This can be simple.
+
+==================================================
+PART 7: FRONTEND API
+==================================================
+
+Update:
+artifacts/my-home-twin/src/lib/api.ts
+
+Add:
+getBillingSummary()
+topUpWallet(data)
+payInvoice(invoiceId)
+
+Types:
+BillingSummary
+Wallet
+Invoice
+WalletTransaction
+
+==================================================
+PART 8: BILLS PAGE UI
+==================================================
+
+Create:
+artifacts/my-home-twin/src/pages/BillsPage.tsx
+
+Arabic title:
+"الفواتير"
+
+English:
+"Bills"
+
+Layout:
+Use clean cards.
+
+Card 1: Wallet
+Arabic:
+"رصيدك داخل التطبيق"
+"الرصيد الحالي: 120 شيكل"
+Button:
+"إضافة رصيد"
+
+English:
+"App Wallet"
+"Current balance: 120 NIS"
+Button:
+"Add Balance"
+
+Card 2: Current Invoice
+Arabic:
+"الفاتورة الحالية"
+"المبلغ: 285 شيكل"
+"الحالة: غير مدفوعة"
+Button:
+"دفع الفاتورة"
+
+If paid:
+"الحالة: مدفوعة"
+Button disabled:
+"تم الدفع"
+
+English:
+"Current Bill"
+"Amount: 285 NIS"
+"Status: Unpaid"
+Button:
+"Pay Bill"
+
+Card 3: Previous Bills
+List previous invoices:
+- month
+- amount
+- status
+- paid date if exists
+
+Arabic status:
+paid = "مدفوعة"
+unpaid = "غير مدفوعة"
+
+English:
+paid = "Paid"
+unpaid = "Unpaid"
+
+Card 4: Payment History
+Show transactions:
+- type
+- amount
+- date
+
+Transaction labels:
+topup:
+Arabic: "إضافة رصيد"
+English: "Wallet Top-up"
+
+bill_payment:
+Arabic: "دفع فاتورة"
+English: "Bill Payment"
+
+==================================================
+PART 9: ADD BALANCE MODAL
+==================================================
+
+When user clicks "إضافة رصيد" / "Add Balance":
+Open modal.
+
+Fields:
+Arabic:
+- المبلغ
+- اسم صاحب البطاقة
+- رقم البطاقة
+- تاريخ الانتهاء
+- CVV
+
+English:
+- Amount
+- Cardholder Name
+- Card Number
+- Expiry Date
+- CVV
+
+Add helper text:
+Arabic:
+"هذه عملية تجريبية لأغراض المشروع فقط. لا تستخدم بطاقة حقيقية."
+
+English:
+"This is a demo payment for the project only. Do not use a real card."
+
+Important:
+Card always succeeds if fields are filled.
+Do not store card data.
+
+Button:
+Arabic:
+"إضافة الرصيد"
+
+English:
+"Add Balance"
+
+After success:
+- close modal
+- refresh billing summary
+- show toast:
+Arabic: "تم إضافة الرصيد بنجاح"
+English: "Balance added successfully"
+
+==================================================
+PART 10: PAY BILL BEHAVIOR
+==================================================
+
+When user clicks "دفع الفاتورة":
+If wallet balance is enough:
+- call payInvoice
+- show success toast:
+Arabic: "تم دفع الفاتورة بنجاح"
+English: "Bill paid successfully"
+- invoice status becomes paid
+- wallet balance decreases
+- transaction appears in history
+
+If wallet balance not enough:
+Show error:
+Arabic:
+"الرصيد غير كافٍ. الرجاء إضافة رصيد أولاً."
+
+English:
+"Insufficient balance. Please add balance first."
+
+Do not allow negative wallet balance.
+
+==================================================
+PART 11: ROUTING AND HEADER
+==================================================
+
+Update App.tsx:
+Add protected route:
+/bills
+
+Update Header.tsx:
+Add nav link:
+Arabic:
+"الفواتير"
+
+English:
+"Bills"
+
+Rename old link:
+Arabic:
+"الفاتورة المتوقعة والبطارية"
+
+English:
+"Estimated Bill & Battery"
+
+Header order:
+- منزلي / My Home
+- الفواتير / Bills
+- الفاتورة المتوقعة والبطارية / Estimated Bill & Battery
+- الشكاوى / Complaints
+- تعديل المنزل / Edit Home
+- logout
+
+==================================================
+PART 12: ASSISTANT UPDATE
+==================================================
+
+Update AssistantPanel so it knows about the new bills feature.
+
+If user asks:
+Arabic keywords:
+- دفع
+- رصيد
+- فواتير
+- فاتورة حالية
+- فواتير سابقة
+
+English:
+- pay
+- balance
+- bills
+- current bill
+- previous bills
+
+Assistant should answer:
+Arabic:
+"يمكنك دفع الفاتورة من صفحة الفواتير. أضف رصيداً إلى محفظتك داخل التطبيق ثم اضغط دفع الفاتورة."
+
+English:
+"You can pay from the Bills page. Add balance to your app wallet, then click Pay Bill."
+
+Assistant must NOT perform payment.
+It only explains.
+
+==================================================
+PART 13: ADMIN OPTIONAL VIEW
+==================================================
+
+In AdminPage.tsx, if simple to add:
+Add a tab:
+Arabic: "الفواتير والمدفوعات"
+English: "Bills & Payments"
+
+Show:
+- citizen name
+- area
+- invoice amount
+- invoice status
+- wallet balance
+- last payment date
+
+This is optional if it risks breaking the app.
+Citizen Bills page is required.
+
+==================================================
+PART 14: ACCEPTANCE TESTS
+==================================================
+
+Test these:
+
+Test 1: Wallet top-up
+- Login as citizen
+- Go to Bills
+- Click Add Balance
+- Enter amount 300
+- Enter any demo card details
+- Submit
+Expected:
+- Wallet balance increases by 300
+- Transaction appears
+- No card data stored
+
+Test 2: Pay bill
+- Current invoice amount 285
+- Wallet balance 300
+- Click Pay Bill
+Expected:
+- Invoice becomes paid
+- Wallet balance becomes 15
+- Payment transaction appears
+
+Test 3: Not enough balance
+- Wallet balance less than invoice
+- Click Pay Bill
+Expected:
+- Show insufficient balance error
+- Invoice remains unpaid
+- Wallet balance unchanged
+
+Test 4: Previous bills
+- Previous bills appear
+- Paid/unpaid status is visible
+
+Test 5: Refresh
+- Refresh page
+Expected:
+- Wallet balance persists
+- Paid invoice persists
+- Transactions persist
+
+Test 6: Logout/login
+- Logout and login again
+Expected:
+- Billing data persists
+
+Test 7: Session
+- Open admin login page after Energy Engineer redirect
+Expected:
+- It starts from access type selection
+- No automatic redirect
+
+==================================================
+IMPORTANT SECURITY DEMO NOTE
+==================================================
+
+This is a demo payment system only.
+Do not store card number, expiry, or CVV in database.
+Do not log them.
+Do not show them in admin.
+Only store wallet transactions and invoice payment records.
+
+Implement now without breaking existing features.

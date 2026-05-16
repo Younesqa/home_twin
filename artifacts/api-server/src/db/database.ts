@@ -101,6 +101,37 @@ function initSchema(db: Database.Database) {
       FOREIGN KEY(user_id) REFERENCES users(id),
       FOREIGN KEY(replied_by) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS wallets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      balance REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      amount REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'unpaid',
+      type TEXT NOT NULL DEFAULT 'current',
+      month TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      paid_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      description TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 }
 

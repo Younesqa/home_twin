@@ -65,6 +65,13 @@ export const api = {
   submitComplaint: (title: string, message: string) =>
     request<{ complaint: Complaint }>("POST", "/complaints", { title, message }),
 
+  // Billing
+  getBillingSummary: () => request<BillingSummary>("GET", "/billing/summary"),
+  topUpWallet: (data: { amount: number; cardholderName: string; cardNumber: string; expiry: string; cvv: string }) =>
+    request<BillingSummary>("POST", "/billing/topup", data),
+  payInvoice: (invoiceId: number) => request<BillingSummary>("POST", `/billing/pay-invoice/${invoiceId}`, {}),
+  adminBilling: () => request<{ invoices: AdminInvoiceRow[] }>("GET", "/billing/admin/all"),
+
   // Admin
   adminStats: () => request<{ totalCitizens: number; byArea: { area: string; count: number }[] }>("GET", "/admin/stats"),
   adminUsers: () => request<{ users: ApiUser[] }>("GET", "/admin/users"),
@@ -165,6 +172,47 @@ export interface SetupPayload {
   confirmRemoveRooms?: boolean;
 }
 
+
+export interface Wallet {
+  id: number;
+  user_id: number;
+  balance: number;
+  updated_at: string;
+}
+
+export interface Invoice {
+  id: number;
+  user_id: number;
+  title: string;
+  amount: number;
+  status: "paid" | "unpaid" | string;
+  type: "current" | "previous" | string;
+  month: string;
+  created_at: string;
+  paid_at: string | null;
+}
+
+export interface WalletTransaction {
+  id: number;
+  user_id: number;
+  type: "topup" | "bill_payment" | string;
+  amount: number;
+  description: string;
+  created_at: string;
+}
+
+export interface BillingSummary {
+  wallet: Wallet;
+  currentInvoice: Invoice | null;
+  previousInvoices: Invoice[];
+  transactions: WalletTransaction[];
+}
+
+export interface AdminInvoiceRow extends Invoice {
+  user_name: string;
+  user_area: string;
+  wallet_balance: number;
+}
 
 export interface Complaint {
   id: number;

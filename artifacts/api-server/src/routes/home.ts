@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getDb, addLog, getDeviceMeta } from "../db/database.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { ensureWallet } from "./billing.js";
 
 const router = Router();
 
@@ -212,6 +213,46 @@ router.post("/setup", requireAuth, (req: AuthRequest, res) => {
 
       createInitialRoomsAndDevices(userId, totalRooms, selectedDevices || [], now);
       addLog(userId, "تم إنشاء المنزل الرقمي", "Digital home created");
+
+      // Ensure wallet exists
+      ensureWallet(userId);
+
+      // Create current invoice if no unpaid current one exists
+      const freshDevices = db.prepare("SELECT * FROM devices WHERE user_id = ?").all(userId) as DeviceRow[];
+      const freshSetup = db.prepare("SELECT * FROM home_setups WHERE user_id = ?").get(userId) as SetupRow;
+      const freshBill = calcBill(
+        { bill_level: freshSetup.bill_level, has_battery: freshSetup.has_battery, family_size: freshSetup.family_size },
+        freshDevices
+      );
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const existingCurrentInvoice = db.prepare(
+        "SELECT id FROM invoices WHERE user_id = ? AND type = 'current' AND status = 'unpaid'"
+      ).get(userId);
+      if (!existingCurrentInvoice) {
+        db.prepare(
+          "INSERT INTO invoices (user_id, title, amount, status, type, month, created_at) VALUES (?, ?, ?, 'unpaid', 'current', ?, ?)"
+        ).run(userId, "فاتورة هذا الشهر", freshBill.estimatedBill, currentMonth, now);
+      }
+
+      // Create demo previous invoices only once
+      const existingPrevious = db.prepare(
+        "SELECT id FROM invoices WHERE user_id = ? AND type = 'previous'"
+      ).get(userId);
+      if (!existingPrevious) {
+        const prevData = [
+          { daysAgo: 30, amount: freshBill.estimatedBill - 20 },
+          { daysAgo: 60, amount: freshBill.estimatedBill + 15 },
+          { daysAgo: 90, amount: freshBill.estimatedBill - 35 },
+        ];
+        for (const prev of prevData) {
+          const prevDate = new Date(Date.now() - prev.daysAgo * 24 * 60 * 60 * 1000).toISOString();
+          const prevMonth = prevDate.slice(0, 7);
+          const paidAt = new Date(Date.now() - (prev.daysAgo - 5) * 24 * 60 * 60 * 1000).toISOString();
+          db.prepare(
+            "INSERT INTO invoices (user_id, title, amount, status, type, month, created_at, paid_at) VALUES (?, ?, ?, 'paid', 'previous', ?, ?, ?)"
+          ).run(userId, "فاتورة شهر سابق", Math.max(50, prev.amount), prevMonth, prevDate, paidAt);
+        }
+      }
     } else {
       reconcileRoomsForEdit(userId, totalRooms, Boolean(confirmRemoveRooms), now);
       db.prepare(

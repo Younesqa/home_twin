@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { getDb } from "../db/database.js";
 import { signToken, requireAuth, type AuthRequest } from "../middleware/auth.js";
+import { ensureWallet } from "./billing.js";
 
 const router = Router();
 
@@ -27,7 +28,8 @@ router.post("/register", (req, res) => {
   ).run(name.trim(), area.trim(), hash, "citizen", now) as { lastInsertRowid: number };
 
   const userId = result.lastInsertRowid;
-  const token = signToken(userId, "citizen");
+  ensureWallet(Number(userId));
+  const token = signToken(Number(userId), "citizen");
 
   res.json({
     token,
