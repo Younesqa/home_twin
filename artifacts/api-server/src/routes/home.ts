@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { getDb, addLog, getDeviceMeta } from "../db/database.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-import { ensureWallet } from "./billing.js";
+import { ensureUserBilling } from "./billing.js";
+import { ensureSolarAccount } from "./solar.js";
 
 const router = Router();
 
@@ -14,6 +15,7 @@ type SetupRow = {
   bill_level: string;
   has_battery: number;
   battery_capacity: number | null;
+  has_solar: number;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -192,9 +194,9 @@ function reconcileRoomsForEdit(userId: number, newTotalRooms: number, confirmRem
 }
 
 router.post("/setup", requireAuth, (req: AuthRequest, res) => {
-  const { homeType, roomCount, familySize, billLevel, hasBattery, batteryCapacity, selectedDevices, confirmRemoveRooms } = req.body as {
+  const { homeType, roomCount, familySize, billLevel, hasBattery, batteryCapacity, selectedDevices, confirmRemoveRooms, hasSolar } = req.body as {
     homeType: string; roomCount: number; familySize: string; billLevel: string;
-    hasBattery: boolean; batteryCapacity: number | null; selectedDevices: string[]; confirmRemoveRooms?: boolean;
+    hasBattery: boolean; batteryCapacity: number | null; selectedDevices: string[]; confirmRemoveRooms?: boolean; hasSolar?: boolean;
   };
 
   const db = getDb();
@@ -207,57 +209,30 @@ router.post("/setup", requireAuth, (req: AuthRequest, res) => {
   try {
     if (!existing) {
       db.prepare(
-        `INSERT INTO home_setups (user_id, home_type, room_count, family_size, bill_level, has_battery, battery_capacity, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(userId, homeType, totalRooms, familySize, billLevel, hasBattery ? 1 : 0, batteryCapacity ?? null, now, now);
+        `INSERT INTO home_setups (user_id, home_type, room_count, family_size, bill_level, has_battery, battery_capacity, has_solar, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(userId, homeType, totalRooms, familySize, billLevel, hasBattery ? 1 : 0, batteryCapacity ?? null, hasSolar ? 1 : 0, now, now);
 
       createInitialRoomsAndDevices(userId, totalRooms, selectedDevices || [], now);
       addLog(userId, "تم إنشاء المنزل الرقمي", "Digital home created");
 
-      // Ensure wallet exists
-      ensureWallet(userId);
+      // Create wallet + invoices based on bill level
+      ensureUserBilling(userId);
 
-      // Create current invoice if no unpaid current one exists
-      const freshDevices = db.prepare("SELECT * FROM devices WHERE user_id = ?").all(userId) as DeviceRow[];
-      const freshSetup = db.prepare("SELECT * FROM home_setups WHERE user_id = ?").get(userId) as SetupRow;
-      const freshBill = calcBill(
-        { bill_level: freshSetup.bill_level, has_battery: freshSetup.has_battery, family_size: freshSetup.family_size },
-        freshDevices
-      );
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const existingCurrentInvoice = db.prepare(
-        "SELECT id FROM invoices WHERE user_id = ? AND type = 'current' AND status = 'unpaid'"
-      ).get(userId);
-      if (!existingCurrentInvoice) {
-        db.prepare(
-          "INSERT INTO invoices (user_id, title, amount, status, type, month, created_at) VALUES (?, ?, ?, 'unpaid', 'current', ?, ?)"
-        ).run(userId, "فاتورة هذا الشهر", freshBill.estimatedBill, currentMonth, now);
-      }
-
-      // Create demo previous invoices only once
-      const existingPrevious = db.prepare(
-        "SELECT id FROM invoices WHERE user_id = ? AND type = 'previous'"
-      ).get(userId);
-      if (!existingPrevious) {
-        const prevData = [
-          { daysAgo: 30, amount: freshBill.estimatedBill - 20 },
-          { daysAgo: 60, amount: freshBill.estimatedBill + 15 },
-          { daysAgo: 90, amount: freshBill.estimatedBill - 35 },
-        ];
-        for (const prev of prevData) {
-          const prevDate = new Date(Date.now() - prev.daysAgo * 24 * 60 * 60 * 1000).toISOString();
-          const prevMonth = prevDate.slice(0, 7);
-          const paidAt = new Date(Date.now() - (prev.daysAgo - 5) * 24 * 60 * 60 * 1000).toISOString();
-          db.prepare(
-            "INSERT INTO invoices (user_id, title, amount, status, type, month, created_at, paid_at) VALUES (?, ?, ?, 'paid', 'previous', ?, ?, ?)"
-          ).run(userId, "فاتورة شهر سابق", Math.max(50, prev.amount), prevMonth, prevDate, paidAt);
-        }
+      // Create solar account if user has solar panels
+      if (hasSolar) {
+        ensureSolarAccount(userId);
+        addLog(userId, "تم ربط حساب الطاقة الشمسية", "Solar energy account linked");
       }
     } else {
       reconcileRoomsForEdit(userId, totalRooms, Boolean(confirmRemoveRooms), now);
       db.prepare(
-        `UPDATE home_setups SET home_type=?, room_count=?, family_size=?, bill_level=?, has_battery=?, battery_capacity=?, updated_at=? WHERE user_id=?`
-      ).run(homeType, totalRooms, familySize, billLevel, hasBattery ? 1 : 0, batteryCapacity ?? null, now, userId);
+        `UPDATE home_setups SET home_type=?, room_count=?, family_size=?, bill_level=?, has_battery=?, battery_capacity=?, has_solar=?, updated_at=? WHERE user_id=?`
+      ).run(homeType, totalRooms, familySize, billLevel, hasBattery ? 1 : 0, batteryCapacity ?? null, hasSolar ? 1 : 0, now, userId);
+      // Ensure billing exists (for users who set up before this feature)
+      ensureUserBilling(userId);
+      // Create solar account if newly enabled
+      if (hasSolar) ensureSolarAccount(userId);
       addLog(userId, "تم تعديل بيانات المنزل", "Home details updated");
     }
   } catch (err) {

@@ -12,6 +12,7 @@ import SetupPage from "@/pages/SetupPage";
 import HomePage from "@/pages/HomePage";
 import BillPage from "@/pages/BillPage";
 import BillsPage from "@/pages/BillsPage";
+import SolarPage from "@/pages/SolarPage";
 import ComplaintsPage from "@/pages/ComplaintsPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminPage from "@/pages/AdminPage";
@@ -58,6 +59,9 @@ function Router() {
       </Route>
       <Route path="/bills">
         <ProtectedRoute component={BillsPage} requireSetup={true} />
+      </Route>
+      <Route path="/solar">
+        <ProtectedRoute component={SolarPage} requireSetup={true} />
       </Route>
       <Route path="/bill">
         <ProtectedRoute component={BillPage} requireSetup={true} />

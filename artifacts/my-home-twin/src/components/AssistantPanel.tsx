@@ -8,7 +8,7 @@ interface Message { id: string; role: 'user' | 'assistant'; content: string; }
 
 export function AssistantPanel() {
   const { t, language } = useLanguage();
-  const { bill, battery, devices, mode } = useHome();
+  const { bill, battery, devices, mode, setup } = useHome();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,6 +47,10 @@ export function AssistantPanel() {
         `Your battery capacity is ${battery.capacity} kWh and lasts about ${battery.runtimeHours} hours for essentials like lights, fridge, and Wi-Fi.`
       );
     }
+    if (lower.includes("شمس") || lower.includes("شمسي") || lower.includes("solar")) {
+      if (!setup?.has_solar) return t("لا توجد خلايا شمسية مسجلة. يمكنك تعديل إعدادات المنزل لتفعيل ميزة الطاقة الشمسية.", "No solar panels registered. You can edit your home settings to enable solar energy.");
+      return t("لديك خلايا شمسية مسجلة. يمكنك زيارة صفحة الطاقة الشمسية لبيع الفائض للبلدية وإضافة الرصيد لمحفظتك.", "You have solar panels registered. Visit the Solar Energy page to sell surplus to the municipality and add funds to your wallet.");
+    }
     if (lower.includes("انقطاع") || lower.includes("outage") || lower.includes("كهرباء")) {
       const list = essentials.length ? essentials.slice(0, 5).join("، ") : t("الإضاءة والثلاجة والواي فاي", "lights, fridge, and Wi-Fi");
       return t(
@@ -76,7 +80,7 @@ export function AssistantPanel() {
         "You can pay from the Bills page. Add balance to your app wallet, then click Pay Bill."
       );
     }
-    return t("أستطيع مساعدتك في الفاتورة، البطارية، التوفير، الانقطاع، أو الفواتير والدفع. التحكم بالأجهزة يكون من خريطة البيت فقط.", "I can help with bill, battery, saving, outage, or billing questions. Device control is only from the home map.");
+    return t("أستطيع مساعدتك في الفاتورة، البطارية، الطاقة الشمسية، التوفير، الانقطاع، أو الفواتير والدفع. التحكم بالأجهزة يكون من خريطة البيت فقط.", "I can help with bill, battery, solar energy, saving, outage, or billing questions. Device control is only from the home map.");
   };
 
   const handleSend = (text: string) => {

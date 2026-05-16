@@ -2,18 +2,21 @@ import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useHome } from "@/contexts/HomeContext";
 import { LanguageToggle } from "./LanguageToggle";
-import { Zap, Battery, Edit3, LogOut, Home, MessageSquare, Wallet } from "lucide-react";
+import { Zap, Battery, Edit3, LogOut, Home, MessageSquare, Wallet, Sun } from "lucide-react";
 
 export function Header() {
   const { t } = useLanguage();
-  const { user, logout } = useHome();
+  const { user, logout, setup } = useHome();
   const [location, setLocation] = useLocation();
 
   if (!user) return null;
 
+  const hasSolar = setup?.has_solar === 1;
+
   const navLinks = [
     { path: "/home", ar: "منزلي", en: "My Home", Icon: Home },
     { path: "/bills", ar: "الفواتير", en: "Bills", Icon: Wallet },
+    ...(hasSolar ? [{ path: "/solar", ar: "الطاقة الشمسية", en: "Solar Energy", Icon: Sun }] : []),
     { path: "/bill", ar: "الفاتورة المتوقعة والبطارية", en: "Estimated Bill & Battery", Icon: Battery },
     { path: "/complaints", ar: "الشكاوى", en: "Complaints", Icon: MessageSquare },
   ];

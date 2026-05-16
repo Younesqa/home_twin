@@ -14,6 +14,7 @@ export function getDb(): Database.Database {
     _db.pragma("journal_mode = WAL");
     _db.pragma("foreign_keys = ON");
     initSchema(_db);
+    runMigrations(_db);
     seedAdmin(_db);
   }
   return _db;
@@ -132,7 +133,26 @@ function initSchema(db: Database.Database) {
       created_at TEXT NOT NULL,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS solar_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      available_kwh REAL NOT NULL DEFAULT 0,
+      rate_per_kwh REAL NOT NULL DEFAULT 0.60,
+      generation_per_minute REAL NOT NULL DEFAULT 0.05,
+      last_updated_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
+}
+
+function runMigrations(db: Database.Database) {
+  try {
+    db.exec("ALTER TABLE home_setups ADD COLUMN has_solar INTEGER DEFAULT 0");
+  } catch {
+    // Column already exists — safe to ignore
+  }
 }
 
 function seedAdmin(db: Database.Database) {

@@ -76,7 +76,7 @@ export default function BillsPage() {
     new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 
   const statusLabel = (status: string) =>
-    status === "paid" ? t("مدفوعة", "Paid") : t("غير مدفوعة", "Unpaid");
+    status === "paid" ? t("مدفوعة", "Paid") : t("مستحقة", "Due");
 
   const txLabel = (type: string) =>
     type === "topup" ? t("إضافة رصيد", "Wallet Top-up") : t("دفع فاتورة", "Bill Payment");

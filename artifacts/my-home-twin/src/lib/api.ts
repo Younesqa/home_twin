@@ -65,6 +65,10 @@ export const api = {
   submitComplaint: (title: string, message: string) =>
     request<{ complaint: Complaint }>("POST", "/complaints", { title, message }),
 
+  // Solar
+  getSolarSummary: () => request<SolarSummary>("GET", "/solar/summary"),
+  sellSolarEnergy: (kwh: number) => request<SolarSummary>("POST", "/solar/sell", { kwh }),
+
   // Billing
   getBillingSummary: () => request<BillingSummary>("GET", "/billing/summary"),
   topUpWallet: (data: { amount: number; cardholderName: string; cardNumber: string; expiry: string; cvv: string }) =>
@@ -125,6 +129,7 @@ export interface ApiSetup {
   bill_level: string;
   has_battery: number;
   battery_capacity: number | null;
+  has_solar: number;
 }
 
 export interface BillInfo {
@@ -170,6 +175,16 @@ export interface SetupPayload {
   batteryCapacity: number | null;
   selectedDevices: string[];
   confirmRemoveRooms?: boolean;
+  hasSolar?: boolean;
+}
+
+export interface SolarSummary {
+  hasSolar: boolean;
+  availableKwh?: number;
+  ratePerKwh?: number;
+  generationPerMinute?: number;
+  estimatedValue?: number;
+  walletBalance?: number;
 }
 
 

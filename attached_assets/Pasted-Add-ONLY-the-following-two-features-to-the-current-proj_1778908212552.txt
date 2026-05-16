@@ -1,0 +1,745 @@
+Add ONLY the following two features to the current project:
+
+1. Basic user invoices
+2. Solar energy selling to the municipality
+
+Important:
+Do NOT rebuild the project.
+Do NOT redesign the whole app.
+Do NOT delete existing features.
+Do NOT break login, register, setup, digital home, devices, complaints, admin, assistant, wallet, or existing estimated bill/battery page.
+Do NOT rewrite working code.
+Only add the requested features safely.
+
+Use safe database migrations only:
+- CREATE TABLE IF NOT EXISTS
+- ALTER TABLE only if needed
+- Never DROP tables
+- Never delete existing user data
+
+==================================================
+FEATURE 1: BASIC INVOICES FOR EACH USER
+==================================================
+
+Goal:
+Every citizen must have:
+1. One old paid invoice
+2. One current unpaid invoice
+
+These invoices should appear in the Bills page.
+
+The old invoice is already paid.
+The current invoice is due/unpaid.
+
+The current invoice amount must be based on the bill level question from setup.
+
+The setup already asks something like:
+Arabic:
+"كم مستوى فاتورتك؟"
+or bill level:
+low / medium / high
+
+Use the saved canonical billLevel value:
+- low
+- medium
+- high
+
+Invoice amount mapping:
+- low = 120 NIS
+- medium = 250 NIS
+- high = 420 NIS
+
+If billLevel is missing, use medium = 250 NIS.
+
+Old paid invoice amount:
+Use current invoice amount minus 20.
+But never less than 80.
+
+Examples:
+If billLevel = low:
+current unpaid invoice = 120
+old paid invoice = 100
+
+If billLevel = medium:
+current unpaid invoice = 250
+old paid invoice = 230
+
+If billLevel = high:
+current unpaid invoice = 420
+old paid invoice = 400
+
+==================================================
+DATABASE
+==================================================
+
+Check if invoices table already exists.
+
+If it exists, do not recreate it.
+If it does not exist, create:
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  amount REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unpaid',
+  type TEXT NOT NULL DEFAULT 'current',
+  month TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  paid_at TEXT,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+Invoice status:
+- unpaid
+- paid
+
+Invoice type:
+- current
+- previous
+
+Also make sure wallet exists for each user.
+If wallets table already exists, keep it.
+If not, create it safely:
+
+CREATE TABLE IF NOT EXISTS wallets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  balance REAL NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+Make sure wallet_transactions table exists:
+
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  amount REAL NOT NULL,
+  description TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+==================================================
+WHEN TO CREATE INVOICES
+==================================================
+
+Do NOT create invoices at register time if setup is not completed yet,
+because invoice amount depends on setup billLevel.
+
+Create invoices safely after home setup is completed.
+
+Where:
+In the backend setup route, after saving home setup successfully.
+
+Also add a safety function:
+ensureUserBilling(userId)
+
+This function should:
+1. Ensure wallet exists.
+2. Check if the user already has invoices.
+3. If the user has no invoices:
+   - read user's billLevel from home_setups
+   - calculate current invoice amount
+   - insert one old paid invoice
+   - insert one current unpaid invoice
+4. If invoices already exist, do nothing.
+
+Important:
+Do not duplicate invoices every time setup is saved.
+Do not create another current invoice if one already exists.
+Do not create another old invoice if one already exists.
+
+Use current month for current invoice:
+YYYY-MM
+
+Use previous month for old invoice:
+YYYY-MM
+
+Old invoice:
+title Arabic/English safe:
+"فاتورة الشهر السابق"
+or
+"Previous Month Bill"
+status = paid
+type = previous
+paid_at = created_at
+
+Current invoice:
+title:
+"فاتورة هذا الشهر"
+or
+"This Month Bill"
+status = unpaid
+type = current
+paid_at = null
+
+==================================================
+BILLS PAGE UPDATE
+==================================================
+
+Update the existing Bills page if it exists.
+Do not create a duplicate page if /bills already exists.
+
+The Bills page must show:
+
+1. Wallet balance
+Arabic:
+"رصيدك داخل التطبيق"
+
+English:
+"App Wallet Balance"
+
+2. Current invoice
+Arabic:
+"الفاتورة الحالية"
+
+English:
+"Current Bill"
+
+Show:
+- amount
+- month
+- status
+
+Arabic status:
+paid = "مدفوعة"
+unpaid = "مستحقة"
+
+English status:
+paid = "Paid"
+unpaid = "Due"
+
+3. Previous invoices
+Arabic:
+"الفواتير السابقة"
+
+English:
+"Previous Bills"
+
+The old paid invoice must appear here.
+
+4. Payment history if it already exists.
+Keep existing payment history.
+
+==================================================
+PAYING CURRENT INVOICE
+==================================================
+
+If wallet payment already exists, keep it.
+
+When the user pays the current invoice:
+- check wallet balance
+- if balance is enough:
+  - subtract invoice amount
+  - status becomes paid
+  - paid_at = now
+  - add wallet transaction:
+    type = bill_payment
+    description = "دفع فاتورة الكهرباء"
+- if balance is not enough:
+  show:
+  Arabic:
+  "الرصيد غير كافٍ لدفع الفاتورة"
+  English:
+  "Insufficient balance to pay the bill"
+
+Do not allow negative balance.
+
+==================================================
+FEATURE 2: SOLAR ENERGY QUESTION IN SETUP
+==================================================
+
+Add a question to the setup wizard:
+
+Arabic:
+"هل يوجد لديك خلايا شمسية؟"
+
+English:
+"Do you have solar panels?"
+
+Options:
+- نعم / Yes
+- لا / No
+
+Save this as a canonical boolean:
+hasSolar: true / false
+
+Do NOT save translated text.
+
+If the home_setups table already has no has_solar column, add it safely:
+
+ALTER TABLE home_setups ADD COLUMN has_solar INTEGER DEFAULT 0;
+
+Use 1 for true, 0 for false.
+
+If the project uses TypeScript types/schemas, update them:
+- setup request type
+- home setup type
+- frontend setup state
+- API types
+
+==================================================
+SOLAR ENERGY PAGE
+==================================================
+
+Add a new protected page:
+
+Route:
+/solar
+
+Arabic page title:
+"الطاقة الشمسية"
+
+English:
+"Solar Energy"
+
+Add it to Header navigation ONLY for users who have hasSolar = true.
+
+If hasSolar = false:
+- do not show the Solar Energy link in the header
+- if user manually opens /solar, show a friendly message:
+
+Arabic:
+"هذه الصفحة متاحة فقط للمستخدمين الذين لديهم خلايا شمسية."
+
+English:
+"This page is only available for users who have solar panels."
+
+==================================================
+SOLAR PAGE IDEA
+==================================================
+
+This is a simple demo feature.
+
+The user can sell solar energy to the municipality and receive instant wallet balance.
+
+Do not make it realistic or complicated.
+Do not use real sensors.
+Do not use external APIs.
+
+Assumptions:
+- The system generates 0.05 kWh per minute.
+- The municipality buys 1 kWh for 0.60 NIS.
+- The available solar energy increases over time while the user has solar panels.
+- For demo simplicity, calculate available energy based on last_solar_update timestamp.
+
+Example:
+If 10 minutes passed:
+10 * 0.05 = 0.5 kWh available
+
+If 60 minutes passed:
+60 * 0.05 = 3 kWh available
+
+Price:
+available kWh * 0.60 NIS
+
+The user can choose how many kWh to sell.
+They cannot sell more than available energy.
+
+After selling:
+- subtract sold kWh from available solar balance
+- add money to wallet balance immediately
+- add wallet transaction:
+  type = solar_sale
+  amount = money earned
+  description = "بيع طاقة شمسية للبلدية"
+
+==================================================
+DATABASE FOR SOLAR
+==================================================
+
+Add table:
+
+CREATE TABLE IF NOT EXISTS solar_accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL UNIQUE,
+  available_kwh REAL NOT NULL DEFAULT 0,
+  rate_per_kwh REAL NOT NULL DEFAULT 0.60,
+  generation_per_minute REAL NOT NULL DEFAULT 0.05,
+  last_updated_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+When a user completes setup with hasSolar = true:
+- create solar account if it does not exist
+
+When hasSolar = false:
+- do not create solar account
+- do not delete old solar data if it exists
+- only hide page/link
+
+==================================================
+SOLAR BACKEND API
+==================================================
+
+Create a route if needed:
+artifacts/api-server/src/routes/solar.ts
+
+Add to routes/index.ts:
+router.use("/solar", solarRouter)
+
+Protected citizen routes:
+
+GET /api/solar/summary
+
+Logic:
+1. Check user setup.
+2. If user hasSolar is false:
+   return:
+   {
+     hasSolar: false
+   }
+
+3. If hasSolar is true:
+   - ensure solar account exists
+   - update available_kwh based on time passed since last_updated_at
+   - save new available_kwh and last_updated_at
+   - return:
+   {
+     hasSolar: true,
+     availableKwh,
+     ratePerKwh,
+     generationPerMinute,
+     estimatedValue,
+     walletBalance
+   }
+
+estimatedValue = availableKwh * ratePerKwh
+
+POST /api/solar/sell
+
+Body:
+{
+  kwh: number
+}
+
+Logic:
+1. Check user hasSolar.
+2. If false, return error.
+3. Ensure solar account exists.
+4. Update available energy based on elapsed time.
+5. Validate kwh:
+   - must be positive
+   - must be <= availableKwh
+6. Calculate earnings:
+   earnings = kwh * ratePerKwh
+7. Subtract kwh from solar availableKwh.
+8. Add earnings to user wallet balance.
+9. Insert wallet transaction:
+   type = solar_sale
+   amount = earnings
+   description = "بيع طاقة شمسية للبلدية"
+10. Add activity log:
+   "تم بيع طاقة شمسية للبلدية وإضافة الرصيد للمحفظة"
+11. Return updated solar summary.
+
+Important:
+Use numbers rounded to 2 decimals for display.
+Store enough precision in database.
+
+==================================================
+FRONTEND API
+==================================================
+
+Update:
+artifacts/my-home-twin/src/lib/api.ts
+
+Add methods:
+- getSolarSummary()
+- sellSolarEnergy(kwh)
+
+Add types:
+SolarSummary:
+{
+  hasSolar: boolean;
+  availableKwh?: number;
+  ratePerKwh?: number;
+  generationPerMinute?: number;
+  estimatedValue?: number;
+  walletBalance?: number;
+}
+
+==================================================
+SOLAR PAGE UI
+==================================================
+
+Create:
+artifacts/my-home-twin/src/pages/SolarPage.tsx
+
+UI cards:
+
+Card 1:
+Arabic:
+"الطاقة الشمسية المتاحة"
+English:
+"Available Solar Energy"
+
+Show:
+availableKwh + " kWh"
+
+Card 2:
+Arabic:
+"سعر البيع للبلدية"
+English:
+"Municipality Buying Rate"
+
+Show:
+ratePerKwh + " شيكل / kWh"
+or
+ratePerKwh + " NIS / kWh"
+
+Card 3:
+Arabic:
+"القيمة التقريبية"
+English:
+"Estimated Value"
+
+Show:
+availableKwh * ratePerKwh
+
+Card 4:
+Arabic:
+"رصيد المحفظة"
+English:
+"Wallet Balance"
+
+Show wallet balance.
+
+Selling form:
+Arabic:
+"كم kWh تريد بيعها؟"
+English:
+"How many kWh do you want to sell?"
+
+Input number:
+- min 0.01
+- max availableKwh
+- step 0.01
+
+Button:
+Arabic:
+"بيع الطاقة للبلدية"
+English:
+"Sell Energy to Municipality"
+
+After successful sale:
+Show success:
+Arabic:
+"تم بيع الطاقة وإضافة الرصيد للمحفظة"
+English:
+"Energy sold and balance added to wallet"
+
+If user tries to sell more than available:
+Arabic:
+"لا يمكنك بيع أكثر من الطاقة المتاحة"
+English:
+"You cannot sell more than the available energy"
+
+Add small explanation:
+Arabic:
+"هذه محاكاة تعليمية. يتم احتساب إنتاج الطاقة بشكل افتراضي داخل التطبيق."
+
+English:
+"This is an educational simulation. Energy production is calculated virtually inside the app."
+
+==================================================
+HEADER UPDATE
+==================================================
+
+Update Header.tsx.
+
+Add nav link:
+Arabic:
+"الطاقة الشمسية"
+
+English:
+"Solar Energy"
+
+Route:
+/solar
+
+Show it only when:
+setup?.hasSolar === true
+
+Do not show it for users without solar panels.
+
+Header order:
+- منزلي / My Home
+- الفواتير / Bills
+- الطاقة الشمسية / Solar Energy, only if user has solar
+- الفاتورة المتوقعة والبطارية / Estimated Bill & Battery
+- الشكاوى / Complaints
+- تعديل المنزل / Edit Home
+- خروج / Logout
+
+==================================================
+APP ROUTING
+==================================================
+
+Update App.tsx.
+
+Add protected route:
+/solar
+
+This route should require normal citizen login.
+Not admin.
+
+==================================================
+ASSISTANT UPDATE
+==================================================
+
+Update AssistantPanel to understand solar questions.
+
+Arabic keywords:
+- شمسية
+- خلايا
+- طاقة شمسية
+- أبيع
+- بلدية
+
+English keywords:
+- solar
+- panels
+- sell energy
+- municipality
+
+Assistant response:
+Arabic:
+"إذا كان لديك خلايا شمسية، يمكنك فتح صفحة الطاقة الشمسية وبيع جزء من الطاقة المتاحة للبلدية. سيتم إضافة المبلغ مباشرة إلى رصيدك داخل التطبيق."
+
+English:
+"If you have solar panels, open the Solar Energy page and sell part of your available energy to the municipality. The earned amount will be added directly to your app wallet."
+
+Assistant must NOT sell energy itself.
+It only explains.
+
+==================================================
+ADMIN PAGE OPTIONAL
+==================================================
+
+If easy and safe:
+In AdminPage, add solar info in user details:
+- has solar: yes/no
+- available kWh
+- wallet balance
+
+This is optional.
+Do not risk breaking admin page.
+
+==================================================
+EXISTING USERS SUPPORT
+==================================================
+
+For existing users:
+- If they already have setup, but no invoices:
+  create invoices when they open Bills page or when GET /api/billing/summary is called.
+- If they already have setup with no has_solar value:
+  treat hasSolar as false.
+- Do not force existing users to redo setup.
+- Do not reset existing homes.
+- Do not delete rooms/devices.
+
+==================================================
+ACCEPTANCE TESTS
+==================================================
+
+Test 1: New user invoices
+1. Register a new citizen.
+2. Complete setup.
+3. Choose bill level = medium.
+4. Open Bills page.
+Expected:
+- One current unpaid invoice exists: 250 NIS.
+- One previous paid invoice exists: 230 NIS.
+- Wallet exists.
+
+Test 2: Low bill level
+Choose bill level = low.
+Expected:
+- Current unpaid invoice = 120 NIS.
+- Previous paid invoice = 100 NIS.
+
+Test 3: High bill level
+Choose bill level = high.
+Expected:
+- Current unpaid invoice = 420 NIS.
+- Previous paid invoice = 400 NIS.
+
+Test 4: No duplicates
+Refresh Bills page many times.
+Logout/login.
+Expected:
+- Invoices are not duplicated.
+
+Test 5: Solar setup yes
+1. Register new citizen.
+2. In setup, answer has solar panels = yes.
+3. Finish setup.
+Expected:
+- Header shows Solar Energy link.
+- Solar page opens.
+- Available kWh appears.
+- Wallet balance appears.
+
+Test 6: Solar setup no
+1. Register new citizen.
+2. Answer has solar panels = no.
+Expected:
+- Header does not show Solar Energy link.
+- Opening /solar manually shows friendly message.
+
+Test 7: Solar selling
+1. User has solar panels.
+2. Open Solar page.
+3. Wait or refresh to calculate available energy.
+4. Sell 0.10 kWh.
+Expected:
+- Available kWh decreases.
+- Wallet balance increases by 0.10 * 0.60 = 0.06 NIS.
+- Transaction appears in wallet/payment history as solar_sale.
+
+Test 8: Cannot oversell
+Try to sell more than available kWh.
+Expected:
+- Show error.
+- Wallet balance unchanged.
+- Solar available energy unchanged.
+
+Test 9: Old features
+Verify these still work:
+- login
+- setup
+- rooms
+- devices
+- room rename
+- complaints
+- bills
+- wallet top-up
+- pay invoice
+- estimated bill and battery
+- admin login
+- Energy Engineer redirect
+
+==================================================
+FINAL REPORT
+==================================================
+
+After finishing, give me a short report:
+
+1. Files changed
+2. Database changes
+3. New routes added
+4. How invoice amount is calculated
+5. How solar selling works
+6. What was tested
+7. Any remaining issue
+
+Remember:
+Only add invoices and solar selling.
+Do not rebuild.
+Do not redesign everything.
+Do not delete old data.

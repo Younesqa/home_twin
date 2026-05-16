@@ -18,9 +18,43 @@ export function ensureWallet(userId: number): void {
   }
 }
 
-function getSummary(userId: number) {
+const BILL_AMOUNTS: Record<string, number> = { low: 120, medium: 250, high: 420 };
+
+export function ensureUserBilling(userId: number): void {
   const db = getDb();
   ensureWallet(userId);
+
+  // Only create invoices if user has no invoices at all
+  const hasAny = db.prepare("SELECT id FROM invoices WHERE user_id = ?").get(userId);
+  if (hasAny) return;
+
+  // Need setup to get bill_level
+  const setup = db.prepare("SELECT bill_level FROM home_setups WHERE user_id = ?").get(userId) as { bill_level: string } | undefined;
+  if (!setup) return;
+
+  const billLevel = setup.bill_level;
+  const currentAmount = BILL_AMOUNTS[billLevel] ?? 250;
+  const previousAmount = Math.max(80, currentAmount - 20);
+
+  const now = new Date().toISOString();
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const prevDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const prevMonth = prevDate.toISOString().slice(0, 7);
+  const prevIso = prevDate.toISOString();
+  const paidAt = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString();
+
+  db.prepare(
+    "INSERT INTO invoices (user_id, title, amount, status, type, month, created_at, paid_at) VALUES (?, ?, ?, 'paid', 'previous', ?, ?, ?)"
+  ).run(userId, "فاتورة الشهر السابق", previousAmount, prevMonth, prevIso, paidAt);
+
+  db.prepare(
+    "INSERT INTO invoices (user_id, title, amount, status, type, month, created_at) VALUES (?, ?, ?, 'unpaid', 'current', ?, ?)"
+  ).run(userId, "فاتورة هذا الشهر", currentAmount, currentMonth, now);
+}
+
+function getSummary(userId: number) {
+  const db = getDb();
+  ensureUserBilling(userId);
   const wallet = db.prepare("SELECT * FROM wallets WHERE user_id = ?").get(userId) as WalletRow;
   const currentInvoice = db.prepare(
     "SELECT * FROM invoices WHERE user_id = ? AND type = 'current' ORDER BY created_at DESC LIMIT 1"
