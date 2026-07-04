@@ -11,7 +11,7 @@ import { Shield, Zap, HardHat, Users, ArrowRight } from "lucide-react";
 
 // Change this URL to the real Energy Engineer portal when ready.
 const ENERGY_ENGINEER_PORTAL_URL =
-  "https://hebron-smart-energy-employee-cleanzip--malikabuzahra04.replit.app/";
+  "https://hebron-smart-frontend.onrender.com/";
 
 type LoginType = "platformAdmin" | "energyEngineer" | null;
 
