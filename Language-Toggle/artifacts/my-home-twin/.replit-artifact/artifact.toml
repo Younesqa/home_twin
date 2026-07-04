@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "My Home Twin | منزلي الرقمي"
+version = "1.0.0"
+id = "artifacts/my-home-twin"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22653
+
+[services.development]
+run = "pnpm --filter @workspace/my-home-twin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/my-home-twin", "run", "build" ]
+publicDir = "artifacts/my-home-twin/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22653"
+BASE_PATH = "/"

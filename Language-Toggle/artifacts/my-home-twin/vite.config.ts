@@ -58,17 +58,11 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
- server: {
+  server: {
     port,
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:8081",
-        changeOrigin: true,
-      },
-    },
     fs: {
       strict: true,
     },
